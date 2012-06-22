@@ -239,7 +239,7 @@ THREE.ShaderUtils = {
 						"specularTex = texture2D( tSpecular, vUv ).xyz;",
 
 					"mat3 tsb = mat3( normalize( vTangent ), normalize( vBinormal ), normalize( vNormal ) );",
-					"vec3 finalNormal = tsb * normalTex;",
+					"vec3 finalNormal = tsb * normalTex * ( -1.0 + 2.0 * float( gl_FrontFacing ) );",
 
 					"vec3 normal = normalize( finalNormal );",
 					"vec3 viewPosition = normalize( vViewPosition );",

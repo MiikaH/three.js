@@ -34,6 +34,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 	this.maxDistance = Infinity;
 
 	this.keys = [ 65 /*A*/, 83 /*S*/, 68 /*D*/ ];
+	
+	this.mouseup_callback = false;
 
 	// internals
 
@@ -362,6 +364,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 	function mouseup( event ) {
 
 		if ( ! _this.enabled ) return;
+		
+		if (_this.mouseup_callback) _this.mouseup_callback();
 
 		event.preventDefault();
 		event.stopPropagation();
