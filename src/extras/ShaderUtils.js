@@ -285,7 +285,7 @@ THREE.ShaderUtils = {
 
 								"float specularNormalization = ( uShininess + 2.0001 ) / 8.0;",
 
-								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor ) * pow( 1.0 - dot( pointVector, pointHalfVector ), 5.0 );",
+								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor.r ) * pow( 1.0 - dot( pointVector, pointHalfVector ), 5.0 );",
 								"pointSpecular += schlick * pointLightColor[ i ] * pointSpecularWeight * pointDiffuseWeight * pointDistance * specularNormalization;",
 
 							"#else",
@@ -339,7 +339,7 @@ THREE.ShaderUtils = {
 
 								"float specularNormalization = ( uShininess + 2.0001 ) / 8.0;",
 
-								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor ) * pow( 1.0 - dot( dirVector, dirHalfVector ), 5.0 );",
+								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor.r ) * pow( 1.0 - dot( dirVector, dirHalfVector ), 5.0 );",
 								"dirSpecular += schlick * directionalLightColor[ i ] * dirSpecularWeight * dirDiffuseWeight * specularNormalization;",
 
 							"#else",
