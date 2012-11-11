@@ -24,10 +24,14 @@ THREE.EventTarget = function () {
 
 	this.dispatchEvent = function ( event ) {
 
-		for ( var listener in listeners[ event.type ] ) {
-
-			listeners[ event.type ][ listener ]( event );
-
+		if (listeners[ event.type ]) {
+		
+			listeners[ event.type ].forEach( function( listener ) {
+			
+				listener( event );
+				
+			});
+			
 		}
 
 	};

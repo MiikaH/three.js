@@ -2640,10 +2640,14 @@ THREE.EventTarget = function () {
 
 	this.dispatchEvent = function ( event ) {
 
-		for ( var listener in listeners[ event.type ] ) {
-
-			listeners[ event.type ][ listener ]( event );
-
+		if (listeners[ event.type ]) {
+		
+			listeners[ event.type ].forEach( function( listener ) {
+			
+				listener( event );
+				
+			});
+			
 		}
 
 	};
@@ -5270,8 +5274,16 @@ THREE.Geometry.prototype = {
 			s2 = uvC.u - uvA.u;
 			t1 = uvB.v - uvA.v;
 			t2 = uvC.v - uvA.v;
+			
+			var ts = s1 * t2 - s2 * t1;
+			/* use generated uv values if ts fails */
+			if (!ts) {
+				s1 = 0.5; s2 = 1.0;
+				t1 = 1.0; t2 = 0.5;
+				ts = s1 * t2 - s2 * t1;
+			}
 
-			r = 1.0 / ( s1 * t2 - s2 * t1 );
+			r = 1.0 / ( ts );
 			sdir.set( ( t2 * x1 - t1 * x2 ) * r,
 					  ( t2 * y1 - t1 * y2 ) * r,
 					  ( t2 * z1 - t1 * z2 ) * r );
@@ -5331,6 +5343,8 @@ THREE.Geometry.prototype = {
 				tmp2.cross( face.vertexNormals[ i ], t );
 				test = tmp2.dot( tan2[ vertexIndex ] );
 				w = (test < 0.0) ? -1.0 : 1.0;
+				/* rather use invalid tangent than null vector */
+				if (tmp.x == 0 && tmp.y == 0 && tmp.z == 0) {tmp.x = 1.0;}
 
 				face.vertexTangents[ i ] = new THREE.Vector4( tmp.x, tmp.y, tmp.z, w );
 
@@ -24594,7 +24608,7 @@ THREE.ShaderUtils = {
 						"specularTex = texture2D( tSpecular, vUv ).xyz;",
 
 					"mat3 tsb = mat3( normalize( vTangent ), normalize( vBinormal ), normalize( vNormal ) );",
-					"vec3 finalNormal = tsb * normalTex;",
+					"vec3 finalNormal = tsb * normalTex * ( -1.0 + 2.0 * float( gl_FrontFacing ) );",
 
 					"#ifdef FLIP_SIDED",
 
@@ -24652,7 +24666,7 @@ THREE.ShaderUtils = {
 
 								"float specularNormalization = ( uShininess + 2.0001 ) / 8.0;",
 
-								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor ) * pow( 1.0 - dot( pointVector, pointHalfVector ), 5.0 );",
+								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor.r ) * pow( 1.0 - dot( pointVector, pointHalfVector ), 5.0 );",
 								"pointSpecular += schlick * pointLightColor[ i ] * pointSpecularWeight * pointDiffuseWeight * pointDistance * specularNormalization;",
 
 							"#else",
@@ -24774,7 +24788,7 @@ THREE.ShaderUtils = {
 
 								"float specularNormalization = ( uShininess + 2.0001 ) / 8.0;",
 
-								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor ) * pow( 1.0 - dot( dirVector, dirHalfVector ), 5.0 );",
+								"vec3 schlick = uSpecularColor + vec3( 1.0 - uSpecularColor.r ) * pow( 1.0 - dot( dirVector, dirHalfVector ), 5.0 );",
 								"dirSpecular += schlick * directionalLightColor[ i ] * dirSpecularWeight * dirDiffuseWeight * specularNormalization;",
 
 							"#else",
