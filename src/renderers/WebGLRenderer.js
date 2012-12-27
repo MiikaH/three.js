@@ -4451,14 +4451,12 @@ THREE.WebGLRenderer = function ( parameters ) {
 		var numMorphTargets = geometry.morphTargets.length;
 		var numMorphNormals = geometry.morphNormals.length;
 
-		var usesFaceMaterial = material instanceof THREE.MeshFaceMaterial;
-
 		geometry.geometryGroups = {};
 
 		for ( f = 0, fl = geometry.faces.length; f < fl; f ++ ) {
 
 			face = geometry.faces[ f ];
-			materialIndex = usesFaceMaterial ? face.materialIndex : 0;
+			materialIndex = face.materialIndex;
 
 			if ( hash_map[ materialIndex ] === undefined ) {
 
