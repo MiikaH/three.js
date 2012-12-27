@@ -4,20 +4,20 @@
  * @author alteredq / http://alteredqualia.com/
  * @author mikael emtinger / http://gomo.se/
  * @author zz85 / http://www.lab4games.net/zz85/blog
+ * @author bhouston / http://exocortex.com
  */
 
 THREE.Geometry = function () {
 
-	THREE.GeometryLibrary.push( this );
+	THREE.EventDispatcher.call( this );
 
 	this.id = THREE.GeometryIdCount ++;
 
 	this.name = '';
 
 	this.vertices = [];
-	this.colors = []; // one-to-one vertex colors, used in ParticleSystem, Line and Ribbon
-
-	this.materials = [];
+	this.colors = [];  // one-to-one vertex colors, used in ParticleSystem, Line and Ribbon
+	this.normals = []; // one-to-one vertex normals, used in Ribbon
 
 	this.faces = [];
 
@@ -31,12 +31,14 @@ THREE.Geometry = function () {
 	this.skinWeights = [];
 	this.skinIndices = [];
 
+	this.lineDistances = [];
+
 	this.boundingBox = null;
 	this.boundingSphere = null;
 
 	this.hasTangents = false;
 
-	this.dynamic = true; // the intermediate typearrays will be deleted when set to false
+	this.dynamic = true; // the intermediate typed arrays will be deleted when set to false
 
 	// update flags
 
@@ -46,17 +48,21 @@ THREE.Geometry = function () {
 	this.normalsNeedUpdate = false;
 	this.tangentsNeedUpdate = false;
 	this.colorsNeedUpdate = false;
+	this.lineDistancesNeedUpdate = false;
+
+	this.buffersNeedUpdate = false;
 
 };
 
 THREE.Geometry.prototype = {
 
-	constructor : THREE.Geometry,
+	constructor: THREE.Geometry,
 
 	applyMatrix: function ( matrix ) {
 
-		var matrixRotation = new THREE.Matrix4();
-		matrixRotation.extractRotation( matrix );
+		var normalMatrix = new THREE.Matrix3();
+
+		normalMatrix.getInverse( matrix ).transpose();
 
 		for ( var i = 0, il = this.vertices.length; i < il; i ++ ) {
 
@@ -70,11 +76,11 @@ THREE.Geometry.prototype = {
 
 			var face = this.faces[ i ];
 
-			matrixRotation.multiplyVector3( face.normal );
+			normalMatrix.multiplyVector3( face.normal ).normalize();
 
 			for ( var j = 0, jl = face.vertexNormals.length; j < jl; j ++ ) {
 
-				matrixRotation.multiplyVector3( face.vertexNormals[ j ] );
+				normalMatrix.multiplyVector3( face.vertexNormals[ j ] ).normalize();
 
 			}
 
@@ -131,11 +137,7 @@ THREE.Geometry.prototype = {
 			ab.sub( vA, vB );
 			cb.crossSelf( ab );
 
-			if ( !cb.isZero() ) {
-
-				cb.normalize();
-
-			}
+			cb.normalize();
 
 			face.normal.copy( cb );
 
@@ -143,7 +145,7 @@ THREE.Geometry.prototype = {
 
 	},
 
-	computeVertexNormals: function () {
+	computeVertexNormals: function ( areaWeighted ) {
 
 		var v, vl, f, fl, face, vertices;
 
@@ -189,22 +191,84 @@ THREE.Geometry.prototype = {
 
 		}
 
-		for ( f = 0, fl = this.faces.length; f < fl; f ++ ) {
+		if ( areaWeighted ) {
 
-			face = this.faces[ f ];
+			// vertex normals weighted by triangle areas
+			// http://www.iquilezles.org/www/articles/normals/normals.htm
 
-			if ( face instanceof THREE.Face3 ) {
+			var vA, vB, vC, vD;
+			var cb = new THREE.Vector3(), ab = new THREE.Vector3(),
+				db = new THREE.Vector3(), dc = new THREE.Vector3(), bc = new THREE.Vector3();
 
-				vertices[ face.a ].addSelf( face.normal );
-				vertices[ face.b ].addSelf( face.normal );
-				vertices[ face.c ].addSelf( face.normal );
+			for ( f = 0, fl = this.faces.length; f < fl; f ++ ) {
 
-			} else if ( face instanceof THREE.Face4 ) {
+				face = this.faces[ f ];
 
-				vertices[ face.a ].addSelf( face.normal );
-				vertices[ face.b ].addSelf( face.normal );
-				vertices[ face.c ].addSelf( face.normal );
-				vertices[ face.d ].addSelf( face.normal );
+				if ( face instanceof THREE.Face3 ) {
+
+					vA = this.vertices[ face.a ];
+					vB = this.vertices[ face.b ];
+					vC = this.vertices[ face.c ];
+
+					cb.sub( vC, vB );
+					ab.sub( vA, vB );
+					cb.crossSelf( ab );
+
+					vertices[ face.a ].addSelf( cb );
+					vertices[ face.b ].addSelf( cb );
+					vertices[ face.c ].addSelf( cb );
+
+				} else if ( face instanceof THREE.Face4 ) {
+
+					vA = this.vertices[ face.a ];
+					vB = this.vertices[ face.b ];
+					vC = this.vertices[ face.c ];
+					vD = this.vertices[ face.d ];
+
+					// abd
+
+					db.sub( vD, vB );
+					ab.sub( vA, vB );
+					db.crossSelf( ab );
+
+					vertices[ face.a ].addSelf( db );
+					vertices[ face.b ].addSelf( db );
+					vertices[ face.d ].addSelf( db );
+
+					// bcd
+
+					dc.sub( vD, vC );
+					bc.sub( vB, vC );
+					dc.crossSelf( bc );
+
+					vertices[ face.b ].addSelf( dc );
+					vertices[ face.c ].addSelf( dc );
+					vertices[ face.d ].addSelf( dc );
+
+				}
+
+			}
+
+		} else {
+
+			for ( f = 0, fl = this.faces.length; f < fl; f ++ ) {
+
+				face = this.faces[ f ];
+
+				if ( face instanceof THREE.Face3 ) {
+
+					vertices[ face.a ].addSelf( face.normal );
+					vertices[ face.b ].addSelf( face.normal );
+					vertices[ face.c ].addSelf( face.normal );
+
+				} else if ( face instanceof THREE.Face4 ) {
+
+					vertices[ face.a ].addSelf( face.normal );
+					vertices[ face.b ].addSelf( face.normal );
+					vertices[ face.c ].addSelf( face.normal );
+					vertices[ face.d ].addSelf( face.normal );
+
+				}
 
 			}
 
@@ -416,10 +480,10 @@ THREE.Geometry.prototype = {
 			z1 = vB.z - vA.z;
 			z2 = vC.z - vA.z;
 
-			s1 = uvB.u - uvA.u;
-			s2 = uvC.u - uvA.u;
-			t1 = uvB.v - uvA.v;
-			t2 = uvC.v - uvA.v;
+			s1 = uvB.x - uvA.x;
+			s2 = uvC.x - uvA.x;
+			t1 = uvB.y - uvA.y;
+			t2 = uvC.y - uvA.y;
 			
 			var ts = s1 * t2 - s2 * t1;
 			/* use generated uv values if ts fails */
@@ -502,83 +566,46 @@ THREE.Geometry.prototype = {
 
 	},
 
-	computeBoundingBox: function () {
+	computeLineDistances: function ( ) {
 
-		if ( ! this.boundingBox ) {
+		var d = 0;
+		var vertices = this.vertices;
 
-			this.boundingBox = { min: new THREE.Vector3(), max: new THREE.Vector3() };
+		for ( var i = 0, il = vertices.length; i < il; i ++ ) {
 
-		}
+			if ( i > 0 ) {
 
-		if ( this.vertices.length > 0 ) {
-
-			var position, firstPosition = this.vertices[ 0 ];
-
-			this.boundingBox.min.copy( firstPosition );
-			this.boundingBox.max.copy( firstPosition );
-
-			var min = this.boundingBox.min,
-				max = this.boundingBox.max;
-
-			for ( var v = 1, vl = this.vertices.length; v < vl; v ++ ) {
-
-				position = this.vertices[ v ];
-
-				if ( position.x < min.x ) {
-
-					min.x = position.x;
-
-				} else if ( position.x > max.x ) {
-
-					max.x = position.x;
-
-				}
-
-				if ( position.y < min.y ) {
-
-					min.y = position.y;
-
-				} else if ( position.y > max.y ) {
-
-					max.y = position.y;
-
-				}
-
-				if ( position.z < min.z ) {
-
-					min.z = position.z;
-
-				} else if ( position.z > max.z ) {
-
-					max.z = position.z;
-
-				}
+				d += vertices[ i ].distanceTo( vertices[ i - 1 ] );
 
 			}
 
-		} else {
-
-			this.boundingBox.min.set( 0, 0, 0 );
-			this.boundingBox.max.set( 0, 0, 0 );
+			this.lineDistances[ i ] = d;
 
 		}
 
 	},
 
-	computeBoundingSphere: function () {
+	computeBoundingBox: function () {
 
-		var maxRadiusSq = 0;
+		if ( this.boundingBox === null ) {
 
-		if ( this.boundingSphere === null ) this.boundingSphere = { radius: 0 };
-
-		for ( var i = 0, l = this.vertices.length; i < l; i ++ ) {
-
-			var radiusSq = this.vertices[ i ].lengthSq();
-			if ( radiusSq > maxRadiusSq ) maxRadiusSq = radiusSq;
+			this.boundingBox = new THREE.Box3();
 
 		}
 
-		this.boundingSphere.radius = Math.sqrt( maxRadiusSq );
+		this.boundingBox.setFromPoints( this.vertices );
+
+	},
+
+	computeBoundingSphere: function () {
+
+		if ( this.boundingSphere === null ) {
+
+			this.boundingSphere = new THREE.Sphere();
+
+		}
+
+		this.boundingSphere.setFromCenterAndPoints( this.boundingSphere.center, this.vertices );
 
 	},
 
@@ -681,18 +708,50 @@ THREE.Geometry.prototype = {
 
 	clone: function () {
 
-		// TODO
+		var geometry = new THREE.Geometry();
+
+		var vertices = this.vertices;
+
+		for ( var i = 0, il = vertices.length; i < il; i ++ ) {
+
+			geometry.vertices.push( vertices[ i ].clone() );
+
+		}
+
+		var faces = this.faces;
+
+		for ( var i = 0, il = faces.length; i < il; i ++ ) {
+
+			geometry.faces.push( faces[ i ].clone() );
+
+		}
+
+		var uvs = this.faceVertexUvs[ 0 ];
+
+		for ( var i = 0, il = uvs.length; i < il; i ++ ) {
+
+			var uv = uvs[ i ], uvCopy = [];
+
+			for ( var j = 0, jl = uv.length; j < jl; j ++ ) {
+
+				uvCopy.push( new THREE.Vector2( uv[ j ].x, uv[ j ].y ) );
+
+			}
+
+			geometry.faceVertexUvs[ 0 ].push( uvCopy );
+
+		}
+
+		return geometry;
 
 	},
 
-	deallocate: function () {
+	dispose: function () {
 
-		var index = THREE.GeometryLibrary.indexOf( this );
-		if ( index !== -1 ) THREE.GeometryLibrary.splice( index, 1 );
+		this.dispatchEvent( { type: 'dispose' } );
 
 	}
 
 };
 
 THREE.GeometryIdCount = 0;
-THREE.GeometryLibrary = [];

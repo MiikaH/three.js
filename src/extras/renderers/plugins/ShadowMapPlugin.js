@@ -64,7 +64,7 @@ THREE.ShadowMapPlugin = function ( ) {
 		_gl.enable( _gl.CULL_FACE );
 		_gl.frontFace( _gl.CCW );
 
-		if ( _renderer.shadowMapCullFrontFaces ) {
+		if ( _renderer.shadowMapCullFace === THREE.CullFaceFront ) {
 
 			_gl.cullFace( _gl.FRONT );
 
@@ -139,7 +139,15 @@ THREE.ShadowMapPlugin = function ( ) {
 
 			if ( ! light.shadowMap ) {
 
-				var pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
+				var shadowFilter = THREE.LinearFilter;
+
+				if ( _renderer.shadowMapType === THREE.PCFSoftShadowMap ) {
+
+					shadowFilter = THREE.NearestFilter;
+
+				}
+
+				var pars = { minFilter: shadowFilter, magFilter: shadowFilter, format: THREE.RGBAFormat };
 
 				light.shadowMap = new THREE.WebGLRenderTarget( light.shadowMapWidth, light.shadowMapHeight, pars );
 				light.shadowMapSize = new THREE.Vector2( light.shadowMapWidth, light.shadowMapHeight );
@@ -209,12 +217,6 @@ THREE.ShadowMapPlugin = function ( ) {
 
 			// update camera matrices and frustum
 
-			if ( ! shadowCamera._viewMatrixArray ) shadowCamera._viewMatrixArray = new Float32Array( 16 );
-			if ( ! shadowCamera._projectionMatrixArray ) shadowCamera._projectionMatrixArray = new Float32Array( 16 );
-
-			shadowCamera.matrixWorldInverse.flattenToArray( shadowCamera._viewMatrixArray );
-			shadowCamera.projectionMatrix.flattenToArray( shadowCamera._projectionMatrixArray );
-
 			_projScreenMatrix.multiply( shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse );
 			_frustum.setFromMatrix( _projScreenMatrix );
 
@@ -236,7 +238,7 @@ THREE.ShadowMapPlugin = function ( ) {
 
 				if ( object.visible && object.castShadow ) {
 
-					if ( ! ( object instanceof THREE.Mesh ) || ! ( object.frustumCulled ) || _frustum.contains( object ) ) {
+					if ( ! ( object instanceof THREE.Mesh || object instanceof THREE.ParticleSystem ) || ! ( object.frustumCulled ) || _frustum.contains( object ) ) {
 
 						object._modelViewMatrix.multiply( shadowCamera.matrixWorldInverse, object.matrixWorld );
 
@@ -265,7 +267,7 @@ THREE.ShadowMapPlugin = function ( ) {
 					// while rendering depth map
 
 					// need to deal with MeshFaceMaterial somehow
-					// in that case just use the first of geometry.materials for now
+					// in that case just use the first of material.materials for now
 					// (proper solution would require to break objects by materials
 					//  similarly to regular rendering and then set corresponding
 					//  depth materials per each chunk instead of just once per object)
@@ -336,7 +338,7 @@ THREE.ShadowMapPlugin = function ( ) {
 		_gl.clearColor( clearColor.r, clearColor.g, clearColor.b, clearAlpha );
 		_gl.enable( _gl.BLEND );
 
-		if ( _renderer.shadowMapCullFrontFaces ) {
+		if ( _renderer.shadowMapCullFace === THREE.CullFaceFront ) {
 
 			_gl.cullFace( _gl.BACK );
 
@@ -480,9 +482,11 @@ THREE.ShadowMapPlugin = function ( ) {
 
 	function getObjectMaterial( object ) {
 
-		return object.material instanceof THREE.MeshFaceMaterial ? object.geometry.materials[ 0 ] : object.material;
+		return object.material instanceof THREE.MeshFaceMaterial
+			? object.material.materials[ 0 ]
+			: object.material;
 
-	}
+	};
 
 };
 

@@ -20,6 +20,7 @@ THREE.Projector = function() {
 
 	_viewProjectionMatrix = new THREE.Matrix4(),
 	_modelViewProjectionMatrix = new THREE.Matrix4(),
+	_normalMatrix = new THREE.Matrix3(),
 
 	_frustum = new THREE.Frustum(),
 
@@ -52,11 +53,9 @@ THREE.Projector = function() {
 
 	this.pickingRay = function ( vector, camera ) {
 
-		var end, ray, t;
-
 		// set two vectors with opposing z values
 		vector.z = -1.0;
-		end = new THREE.Vector3( vector.x, vector.y, 1.0 );
+		var end = new THREE.Vector3( vector.x, vector.y, 1.0 );
 
 		this.unprojectVector( vector, camera );
 		this.unprojectVector( end, camera );
@@ -64,7 +63,7 @@ THREE.Projector = function() {
 		// find direction from vector to end
 		end.subSelf( vector ).normalize();
 
-		return new THREE.Ray( vector, end );
+		return new THREE.Raycaster( vector, end );
 
 	};
 
@@ -170,11 +169,10 @@ THREE.Projector = function() {
 	this.projectScene = function ( scene, camera, sortObjects, sortElements ) {
 
 		var near = camera.near, far = camera.far, visible = false,
-		o, ol, v, vl, f, fl, n, nl, c, cl, u, ul, object,
-		modelMatrix, rotationMatrix,
-		geometry, geometryMaterials, vertices, vertex, vertexPositionScreen,
+		o, ol, v, vl, f, fl, n, nl, c, cl, u, ul, object, modelMatrix,
+		geometry, vertices, vertex, vertexPositionScreen,
 		faces, face, faceVertexNormals, normal, faceVertexUvs, uvs,
-		v1, v2, v3, v4, isFaceMaterial, material, side;
+		v1, v2, v3, v4, isFaceMaterial, objectMaterials, material, side;
 
 		_face3Count = 0;
 		_face4Count = 0;
@@ -195,7 +193,7 @@ THREE.Projector = function() {
 
 		_renderData = projectGraph( scene, sortObjects );
 
-		for ( o = 0, ol = _renderData.objects.length; o < ol; o++ ) {
+		for ( o = 0, ol = _renderData.objects.length; o < ol; o ++ ) {
 
 			object = _renderData.objects[ o ].object;
 
@@ -206,14 +204,17 @@ THREE.Projector = function() {
 			if ( object instanceof THREE.Mesh ) {
 
 				geometry = object.geometry;
-				geometryMaterials = object.geometry.materials;
+
 				vertices = geometry.vertices;
 				faces = geometry.faces;
 				faceVertexUvs = geometry.faceVertexUvs;
 
-				rotationMatrix = object.matrixRotationWorld.extractRotation( modelMatrix );
+				_normalMatrix.getInverse( modelMatrix );
+				_normalMatrix.transpose();
 
 				isFaceMaterial = object.material instanceof THREE.MeshFaceMaterial;
+				objectMaterials = isFaceMaterial === true ? object.material : null;
+
 				side = object.material.side;
 
 				for ( v = 0, vl = vertices.length; v < vl; v ++ ) {
@@ -237,7 +238,7 @@ THREE.Projector = function() {
 
 					face = faces[ f ];
 
-					material = isFaceMaterial === true ? geometryMaterials[ face.materialIndex ] : object.material;
+					material = isFaceMaterial === true ? objectMaterials.materials[ face.materialIndex ] : object.material;
 
 					if ( material === undefined ) continue;
 
@@ -315,7 +316,7 @@ THREE.Projector = function() {
 					_face.normalWorld.copy( face.normal );
 
 					if ( visible === false && ( side === THREE.BackSide || side === THREE.DoubleSide ) ) _face.normalWorld.negate();
-					rotationMatrix.multiplyVector3( _face.normalWorld );
+					_normalMatrix.multiplyVector3( _face.normalWorld ).normalize();
 
 					_face.centroidWorld.copy( face.centroid );
 					modelMatrix.multiplyVector3( _face.centroidWorld );
@@ -332,7 +333,7 @@ THREE.Projector = function() {
 
 						if ( visible === false && ( side === THREE.BackSide || side === THREE.DoubleSide ) ) normal.negate();
 
-						rotationMatrix.multiplyVector3( normal );
+						_normalMatrix.multiplyVector3( normal ).normalize();
 
 					}
 

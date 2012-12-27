@@ -4,7 +4,7 @@
 
 THREE.TrackballControls = function ( object, domElement ) {
 
-	THREE.EventTarget.call( this );
+	THREE.EventDispatcher.call( this );
 
 	var _this = this;
 	var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2 };
@@ -331,7 +331,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 			_panStart = _panEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
 
 		}
-		
+
 		document.addEventListener( 'mousemove', mousemove, false );
 		document.addEventListener( 'mouseup', mouseup, false );
 
@@ -396,11 +396,60 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	}
 
+	function touchstart( event ) {
+
+		if ( ! _this.enabled ) return;
+
+		event.preventDefault();
+
+		switch ( event.touches.length ) {
+
+			case 1:
+				_rotateStart = _rotateEnd = _this.getMouseProjectionOnBall( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+			case 2:
+				_zoomStart = _zoomEnd = _this.getMouseOnScreen( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+			case 3:
+				_panStart = _panEnd = _this.getMouseOnScreen( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+
+		}
+
+	}
+
+	function touchmove( event ) {
+
+		if ( ! _this.enabled ) return;
+
+		event.preventDefault();
+
+		switch ( event.touches.length ) {
+
+			case 1:
+				_rotateEnd = _this.getMouseProjectionOnBall( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+			case 2:
+				_zoomEnd = _this.getMouseOnScreen( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+			case 3:
+				_panEnd = _this.getMouseOnScreen( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+				break;
+
+		}
+
+	}
+
 	this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
 
 	this.domElement.addEventListener( 'mousedown', mousedown, false );
-	this.domElement.addEventListener( 'DOMMouseScroll', mousewheel, false );
+
 	this.domElement.addEventListener( 'mousewheel', mousewheel, false );
+	this.domElement.addEventListener( 'DOMMouseScroll', mousewheel, false ); // firefox
+
+	this.domElement.addEventListener( 'touchstart', touchstart, false );
+	this.domElement.addEventListener( 'touchend', touchstart, false );
+	this.domElement.addEventListener( 'touchmove', touchmove, false );
 
 	window.addEventListener( 'keydown', keydown, false );
 	window.addEventListener( 'keyup', keyup, false );

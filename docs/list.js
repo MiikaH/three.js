@@ -16,6 +16,7 @@ var list = {
 		"Core": [
 			[ "Clock", "api/core/Clock" ],
 			[ "Color", "api/core/Color" ],
+			[ "EventDispatcher", "api/core/EventDispatcher" ],
 			[ "Face3", "api/core/Face3" ],
 			[ "Face4", "api/core/Face4" ],
 			[ "Frustum", "api/core/Frustum" ],
@@ -26,7 +27,7 @@ var list = {
 			[ "Object3D", "api/core/Object3D" ],
 			[ "Projector", "api/core/Projector" ],
 			[ "Quaternion", "api/core/Quaternion" ],
-			[ "Ray", "api/core/Ray" ],
+			[ "Raycaster", "api/core/Raycaster" ],
 			[ "Rectangle", "api/core/Rectangle" ],
 			[ "Spline", "api/core/Spline" ],
 			[ "UV", "api/core/UV" ],
@@ -135,23 +136,13 @@ var list = {
 			[ "CubeCamera", "api/extras/cameras/CubeCamera" ]
 		],
 
-		"Extras / Controls": [
-			[ "FirstPersonControls", "api/extras/controls/FirstPersonControls" ],
-			[ "FlyControls", "api/extras/controls/FlyControls" ],
-			[ "PathControls", "api/extras/controls/PathControls" ],
-			[ "RollControls", "api/extras/controls/RollControls" ],
-			[ "TrackballControls", "api/extras/controls/TrackballControls" ]
-		],
-
 		"Extras / Core": [
 			[ "BufferGeometry", "api/extras/core/BufferGeometry" ],
 			[ "Curve", "api/extras/core/Curve" ],
 			[ "CurvePath", "api/extras/core/CurvePath" ],
-			[ "EventTarget", "api/extras/core/EventTarget" ],
 			[ "Gyroscope", "api/extras/core/Gyroscope" ],
 			[ "Path", "api/extras/core/Path" ],
-			[ "Shape", "api/extras/core/Shape" ],
-			[ "TextPath", "api/extras/core/TextPath" ]
+			[ "Shape", "api/extras/core/Shape" ]
 		],
 
 		"Extras / Geometries": [

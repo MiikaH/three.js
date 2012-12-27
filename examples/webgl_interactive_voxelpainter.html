@@ -22,7 +22,7 @@
 		<script src="js/Detector.js"></script>
 		<script src="js/libs/stats.min.js"></script>
 
-		<script src='js/libs/DAT.GUI.min.js'></script>
+		<script src='js/libs/dat.gui.min.js'></script>
 
 		<script>
 
@@ -31,9 +31,9 @@
 			var container, stats;
 			var camera, scene, renderer;
 			var projector, plane, cube;
-			var mouse2D, mouse3D, ray,
+			var mouse2D, mouse3D, raycaster,
 			rollOveredFace, isShiftDown = false,
-			theta = 45, isCtrlDown = false;
+			theta = 45 * 0.5, isCtrlDown = false;
 
 			var rollOverMesh, rollOverMaterial, voxelPosition = new THREE.Vector3(), tmpVec = new THREE.Vector3();
 			var cubeGeo, cubeMaterial;
@@ -120,21 +120,25 @@
 
 				// add GUI
 
-				gui = new DAT.GUI();
-				gui.add(voxelConfig, 'orthographicProjection').onChange(function(){
+				gui = new dat.GUI();
+				gui.add( voxelConfig, 'orthographicProjection' ).onChange( function(){
 
 					if ( voxelConfig.orthographicProjection ) {
+
 						camera.toOrthographic();
 						camera.position.x = 1000;
                			camera.position.y = 707.106;
                 		camera.position.z = 1000;
 						theta = 90;
+
 					} else {
+
 						camera.toPerspective();
 						camera.position.y = 800;
+
 					}
 
-				});
+				} );
 
 				gui.close();
 
@@ -192,7 +196,7 @@
 
 				event.preventDefault();
 
-				var intersects = ray.intersectObjects( scene.children );
+				var intersects = raycaster.intersectObjects( scene.children );
 
 				if ( intersects.length > 0 ) {
 
@@ -268,13 +272,13 @@
 
 				if ( isShiftDown ) {
 
-					theta += mouse2D.x * 3;
+					theta += mouse2D.x * 1.5;
 
 				}
 
-				ray = projector.pickingRay( mouse2D.clone(), camera );
+				raycaster = projector.pickingRay( mouse2D.clone(), camera );
 
-				var intersects = ray.intersectObjects( scene.children );
+				var intersects = raycaster.intersectObjects( scene.children );
 
 				if ( intersects.length > 0 ) {
 
@@ -288,8 +292,8 @@
 
 				}
 
-				camera.position.x = 1400 * Math.sin( theta * Math.PI / 360 );
-				camera.position.z = 1400 * Math.cos( theta * Math.PI / 360 );
+				camera.position.x = 1400 * Math.sin( THREE.Math.degToRad( theta ) );
+				camera.position.z = 1400 * Math.cos( THREE.Math.degToRad( theta ) );
 
 				camera.lookAt( scene.position );
 
