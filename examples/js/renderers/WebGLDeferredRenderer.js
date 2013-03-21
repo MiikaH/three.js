@@ -15,6 +15,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 	var scaledHeight = Math.floor( currentScale * fullHeight );
 
 	var brightness = parameters.brightness !== undefined ? parameters.brightness : 1;
+	var tonemapping = parameters.tonemapping !== undefined ? parameters.tonemapping : THREE.SimpleOperator;
 	var antialias = parameters.antialias !== undefined ? parameters.antialias : false;
 
 	this.renderer = parameters.renderer;
@@ -39,6 +40,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var positionVS = new THREE.Vector3();
 	var directionVS = new THREE.Vector3();
+	var tempVS = new THREE.Vector3();
 
 	var rightVS = new THREE.Vector3();
 	var normalVS = new THREE.Vector3();
@@ -124,16 +126,16 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 			}
 
-			object.properties.colorMaterial = new THREE.MeshFaceMaterial( colorMaterials );
-			object.properties.normalDepthMaterial = new THREE.MeshFaceMaterial( normalDepthMaterials );
+			object.userData.colorMaterial = new THREE.MeshFaceMaterial( colorMaterials );
+			object.userData.normalDepthMaterial = new THREE.MeshFaceMaterial( normalDepthMaterials );
 
 		} else {
 
 			var deferredMaterials = createDeferredMaterials( object.material );
 
-			object.properties.colorMaterial = deferredMaterials.colorMaterial;
-			object.properties.normalDepthMaterial = deferredMaterials.normalDepthMaterial;
-			object.properties.transparent = deferredMaterials.transparent;
+			object.userData.colorMaterial = deferredMaterials.colorMaterial;
+			object.userData.normalDepthMaterial = deferredMaterials.normalDepthMaterial;
+			object.userData.transparent = deferredMaterials.transparent;
 
 		}
 
@@ -205,7 +207,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 			uniforms.viewWidth.value = scaledWidth;
 			uniforms.viewHeight.value = scaledHeight;
 
-			resizableMaterials.push( material );
+			resizableMaterials.push( { "material": material } );
 
 		}
 
@@ -315,7 +317,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var updatePointLightProxy = function ( lightProxy ) {
 
-		var light = lightProxy.properties.originalLight;
+		var light = lightProxy.userData.originalLight;
 		var uniforms = lightProxy.material.uniforms;
 
 		// skip infinite pointlights
@@ -329,11 +331,12 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 			lightProxy.scale.set( 1, 1, 1 ).multiplyScalar( distance );
 			uniforms[ "lightRadius" ].value = distance;
 
-			positionVS.copy( light.matrixWorld.getPosition() );
-			camera.matrixWorldInverse.multiplyVector3( positionVS );
+			positionVS.getPositionFromMatrix( light.matrixWorld );
+			positionVS.applyMatrix4( camera.matrixWorldInverse );
+
 			uniforms[ "lightPositionVS" ].value.copy( positionVS );
 
-			lightProxy.position.copy( light.matrixWorld.getPosition() );
+			lightProxy.position.getPositionFromMatrix( light.matrixWorld );
 
 		} else {
 
@@ -398,11 +401,11 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for color and intensity updates
 
-		meshLight.properties.originalLight = light;
+		meshLight.userData.originalLight = light;
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		// sync proxy uniforms to the original light
 
@@ -414,19 +417,20 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var updateSpotLightProxy = function ( lightProxy ) {
 
-		var light = lightProxy.properties.originalLight;
+		var light = lightProxy.userData.originalLight;
 		var uniforms = lightProxy.material.uniforms;
 
 		var viewMatrix = camera.matrixWorldInverse;
 		var modelMatrix = light.matrixWorld;
 
-		positionVS.copy( modelMatrix.getPosition() );
-		viewMatrix.multiplyVector3( positionVS );
+		positionVS.getPositionFromMatrix( modelMatrix );
+		positionVS.applyMatrix4( viewMatrix );
 
-		directionVS.copy( modelMatrix.getPosition() );
-		directionVS.subSelf( light.target.matrixWorld.getPosition() );
+		directionVS.getPositionFromMatrix( modelMatrix );
+		tempVS.getPositionFromMatrix( light.target.matrixWorld );
+		directionVS.sub( tempVS );
 		directionVS.normalize();
-		viewMatrix.rotateAxis( directionVS );
+		directionVS.transformDirection( viewMatrix );
 
 		uniforms[ "lightPositionVS" ].value.copy( positionVS );
 		uniforms[ "lightDirectionVS" ].value.copy( directionVS );
@@ -474,11 +478,11 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for color and intensity updates
 
-		meshLight.properties.originalLight = light;
+		meshLight.userData.originalLight = light;
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		// sync proxy uniforms to the original light
 
@@ -490,13 +494,14 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var updateDirectionalLightProxy = function ( lightProxy ) {
 
-		var light = lightProxy.properties.originalLight;
+		var light = lightProxy.userData.originalLight;
 		var uniforms = lightProxy.material.uniforms;
 
-		directionVS.copy( light.matrixWorld.getPosition() );
-		directionVS.subSelf( light.target.matrixWorld.getPosition() );
+		directionVS.getPositionFromMatrix( light.matrixWorld );
+		tempVS.getPositionFromMatrix( light.target.matrixWorld );
+		directionVS.sub( tempVS );
 		directionVS.normalize();
-		camera.matrixWorldInverse.rotateAxis( directionVS );
+		directionVS.transformDirection( camera.matrixWorldInverse );
 
 		uniforms[ "lightDirectionVS" ].value.copy( directionVS );
 
@@ -540,11 +545,11 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for color and intensity updates
 
-		meshLight.properties.originalLight = light;
+		meshLight.userData.originalLight = light;
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		// sync proxy uniforms to the original light
 
@@ -556,12 +561,12 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var updateHemisphereLightProxy = function ( lightProxy ) {
 
-		var light = lightProxy.properties.originalLight;
+		var light = lightProxy.userData.originalLight;
 		var uniforms = lightProxy.material.uniforms;
 
-		directionVS.copy( light.matrixWorld.getPosition() );
+		directionVS.getPositionFromMatrix( light.matrixWorld );
 		directionVS.normalize();
-		camera.matrixWorldInverse.rotateAxis( directionVS );
+		directionVS.transformDirection( camera.matrixWorldInverse );
 
 		uniforms[ "lightDirectionVS" ].value.copy( directionVS );
 
@@ -606,11 +611,11 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for color and intensity updates
 
-		meshLight.properties.originalLight = light;
+		meshLight.userData.originalLight = light;
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		// sync proxy uniforms to the original light
 
@@ -622,25 +627,26 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var updateAreaLightProxy = function ( lightProxy ) {
 
-		var light = lightProxy.properties.originalLight;
+		var light = lightProxy.userData.originalLight;
 		var uniforms = lightProxy.material.uniforms;
 
 		var modelMatrix = light.matrixWorld;
 		var viewMatrix = camera.matrixWorldInverse;
 
-		positionVS.copy( modelMatrix.getPosition() );
-		viewMatrix.multiplyVector3( positionVS );
+		positionVS.getPositionFromMatrix( modelMatrix );
+		positionVS.applyMatrix4( viewMatrix );
+
 		uniforms[ "lightPositionVS" ].value.copy( positionVS );
 
 		rightVS.copy( light.right );
+		rightVS.transformDirection( modelMatrix );
+		rightVS.transformDirection( viewMatrix );
+
 		normalVS.copy( light.normal );
-		modelMatrix.rotateAxis( rightVS );
-		modelMatrix.rotateAxis( normalVS );
+		normalVS.transformDirection( modelMatrix );
+		normalVS.transformDirection( viewMatrix );
 
-		viewMatrix.rotateAxis( rightVS );
-		viewMatrix.rotateAxis( normalVS );
-
-		upVS.cross( rightVS, normalVS );
+		upVS.crossVectors( rightVS, normalVS );
 		upVS.normalize();
 
 		uniforms[ "lightRightVS" ].value.copy( rightVS );
@@ -694,11 +700,11 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for color and intensity updates
 
-		meshLight.properties.originalLight = light;
+		meshLight.userData.originalLight = light;
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		// sync proxy uniforms to the original light
 
@@ -734,7 +740,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// keep reference for size reset
 
-		resizableMaterials.push( materialLight );
+		resizableMaterials.push( { "material": materialLight } );
 
 		return meshLight;
 
@@ -742,7 +748,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	var initDeferredProperties = function ( object ) {
 
-		if ( object.properties.deferredInitialized ) return;
+		if ( object.userData.deferredInitialized ) return;
 
 		if ( object.material ) initDeferredMaterials( object );
 
@@ -782,7 +788,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		}
 
-		object.properties.deferredInitialized = true;
+		object.userData.deferredInitialized = true;
 
 	};
 
@@ -792,13 +798,13 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		if ( object.material ) {
 
-			if ( object.properties.transparent ) {
+			if ( object.userData.transparent ) {
 
 				object.material = invisibleMaterial;
 
 			} else {
 
-				object.material = object.properties.colorMaterial;
+				object.material = object.userData.colorMaterial;
 
 			}
 
@@ -810,13 +816,13 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		if ( object.material ) {
 
-			if ( object.properties.transparent ) {
+			if ( object.userData.transparent ) {
 
 				object.material = invisibleMaterial;
 
 			} else {
 
-				object.material = object.properties.normalDepthMaterial;
+				object.material = object.userData.normalDepthMaterial;
 
 			}
 
@@ -849,6 +855,25 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 	};
 
+	this.addEffect = function ( effect, normalDepthUniform, colorUniform ) {
+
+		if ( effect.material && effect.uniforms ) {
+
+			if ( normalDepthUniform ) effect.uniforms[ normalDepthUniform ].value = compNormalDepth.renderTarget2;
+			if ( colorUniform )    	  effect.uniforms[ colorUniform ].value = compColor.renderTarget2;
+
+			if ( normalDepthUniform || colorUniform ) {
+
+				resizableMaterials.push( { "material": effect.material, "normalDepth": normalDepthUniform, "color": colorUniform } );
+
+			}
+
+		}
+
+		compFinal.insertPass( effect, -1 );
+
+	};
+
 	this.setScale = function ( scale ) {
 
 		currentScale = scale;
@@ -866,13 +891,19 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		for ( var i = 0, il = resizableMaterials.length; i < il; i ++ ) {
 
-			var uniforms = resizableMaterials[ i ].uniforms;
+			var materialEntry = resizableMaterials[ i ];
 
-			uniforms[ "viewWidth" ].value = scaledWidth;
-			uniforms[ "viewHeight" ].value = scaledHeight;
+			var material = materialEntry.material;
+			var uniforms = material.uniforms;
 
-			if ( uniforms[ 'samplerColor' ] ) uniforms[ 'samplerColor' ].value = compColor.renderTarget2;
-			if ( uniforms[ 'samplerNormalDepth' ] ) uniforms[ 'samplerNormalDepth' ].value = compNormalDepth.renderTarget2;
+			var colorLabel = materialEntry.color !== undefined ? materialEntry.color : 'samplerColor';
+			var normalDepthLabel = materialEntry.normalDepth !== undefined ? materialEntry.normalDepth : 'samplerNormalDepth';
+
+			if ( uniforms[ colorLabel ] ) uniforms[ colorLabel ].value = compColor.renderTarget2;
+			if ( uniforms[ normalDepthLabel ] ) uniforms[ normalDepthLabel ].value = compNormalDepth.renderTarget2;
+
+			if ( uniforms[ 'viewWidth' ] ) uniforms[ "viewWidth" ].value = scaledWidth;
+			if ( uniforms[ 'viewHeight' ] ) uniforms[ "viewHeight" ].value = scaledHeight;
 
 		}
 
@@ -902,7 +933,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 		if ( uniforms[ "matProjInverse" ] ) uniforms[ "matProjInverse" ].value = camera.projectionMatrixInverse;
 		if ( uniforms[ "matView" ] ) uniforms[ "matView" ].value = camera.matrixWorldInverse;
 
-		var originalLight = proxy.properties.originalLight;
+		var originalLight = proxy.userData.originalLight;
 
 		if ( originalLight ) {
 
@@ -938,18 +969,18 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 		// setup deferred properties
 
-		if ( ! scene.properties.lightSceneProxy ) {
+		if ( ! scene.userData.lightSceneProxy ) {
 
-			scene.properties.lightSceneProxy = new THREE.Scene();
-			scene.properties.lightSceneFullscreen = new THREE.Scene();
+			scene.userData.lightSceneProxy = new THREE.Scene();
+			scene.userData.lightSceneFullscreen = new THREE.Scene();
 
 			var meshLight = createDeferredEmissiveLight();
-			scene.properties.lightSceneFullscreen.add( meshLight );
+			scene.userData.lightSceneFullscreen.add( meshLight );
 
 		}
 
-		lightSceneProxy = scene.properties.lightSceneProxy;
-		lightSceneFullscreen = scene.properties.lightSceneFullscreen;
+		lightSceneProxy = scene.userData.lightSceneProxy;
+		lightSceneFullscreen = scene.userData.lightSceneFullscreen;
 
 		passColor.camera = camera;
 		passNormalDepth.camera = camera;
@@ -1115,6 +1146,20 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 		compositePass.material.blending = THREE.NoBlending;
 		compositePass.clear = true;
 
+		var defines;
+
+		switch ( tonemapping ) {
+
+			case THREE.SimpleOperator:    defines = { "TONEMAP_SIMPLE": true };    break;
+			case THREE.LinearOperator:    defines = { "TONEMAP_LINEAR": true };    break;
+			case THREE.ReinhardOperator:  defines = { "TONEMAP_REINHARD": true };  break;
+			case THREE.FilmicOperator:    defines = { "TONEMAP_FILMIC": true };    break;
+			case THREE.UnchartedOperator: defines = { "TONEMAP_UNCHARTED": true }; break;
+
+		}
+
+		compositePass.material.defines = defines;
+
 		// FXAA
 
 		effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
@@ -1136,6 +1181,7 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 
 			effectFXAA.enabled = false;
 			compositePass.renderToScreen = true;
+
 		}
 
 	};
@@ -1145,3 +1191,12 @@ THREE.WebGLDeferredRenderer = function ( parameters ) {
 	createRenderTargets();
 
 };
+
+// tonemapping operator types
+
+THREE.NoOperator = 0;
+THREE.SimpleOperator = 1;
+THREE.LinearOperator = 2;
+THREE.ReinhardOperator = 3;
+THREE.FilmicOperator = 4;
+THREE.UnchartedOperator = 5;

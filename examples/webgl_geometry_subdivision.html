@@ -207,7 +207,7 @@
 
 				if ( params.scale ) {
 
-					geometry.applyMatrix( new THREE.Matrix4().makeScale( new THREE.Vector3( params.scale, params.scale, params.scale ) ) );
+					geometry.applyMatrix( new THREE.Matrix4().makeScale( params.scale, params.scale, params.scale ) );
 
 				}
 
@@ -243,7 +243,7 @@
 						p = smooth.vertices[ vertexIndex ];
 
 						color = new THREE.Color( 0xffffff );
-						color.setHSV( ( p.y ) / 200 + 0.5, 1.0, 1.0 );
+						color.setHSL( ( p.y ) / 200 + 0.5, 1.0, 0.5 );
 
 						f.vertexColors[ j ] = color;
 

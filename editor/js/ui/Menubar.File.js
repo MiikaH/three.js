@@ -25,20 +25,12 @@ Menubar.File = function ( signals ) {
 	options.add( option );
 	*/
 
-	// reset scene
-
-	var option = new UI.Panel();
-	option.setClass( 'option' );
-	option.setTextContent( 'Reset' );
-	option.onClick( function () { signals.resetScene.dispatch(); } );
-	options.add( option );
-
 	// export geometry
 
 	var option = new UI.Panel();
 	option.setClass( 'option' );
 	option.setTextContent( 'Export Geometry' );
-	option.onClick( function () { signals.exportGeometry.dispatch(); } );
+	option.onClick( function () { signals.exportGeometry.dispatch( { exporter: THREE.GeometryExporter } ); } );
 	options.add( option );
 
 	// export scene
@@ -46,18 +38,24 @@ Menubar.File = function ( signals ) {
 	var option = new UI.Panel();
 	option.setClass( 'option' );
 	option.setTextContent( 'Export Scene' );
-	option.onClick( function () { signals.exportScene.dispatch(); } );
+	option.onClick( function () { signals.exportScene.dispatch( { exporter: THREE.SceneExporter } ); } );
 	options.add( option );
 
-	/*
+	// export scene 2
+
+	var option = new UI.Panel();
+	option.setClass( 'option' );
+	option.setTextContent( 'Export Scene 2' );
+	option.onClick( function () { signals.exportScene.dispatch( { exporter: THREE.SceneExporter2 } ); } );
+	options.add( option );
+
 	// export OBJ
 
 	var option = new UI.Panel();
 	option.setClass( 'option' );
 	option.setTextContent( 'Export OBJ' );
-	option.onClick( function () { alert( 'Export OBJ' ) } );
+	option.onClick( function () { signals.exportGeometry.dispatch( { exporter: THREE.OBJExporter } ); } );
 	options.add( option );
-	*/
 
 	//
 

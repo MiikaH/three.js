@@ -145,7 +145,7 @@ THREE.Loader.prototype = {
 
 		function create_texture( where, name, sourceFile, repeat, offset, wrap, anisotropy ) {
 
-			var isCompressed = sourceFile.toLowerCase().endsWith( ".dds" );
+			var isCompressed = /\.dds$/i.test( sourceFile );
 			var fullPath = texturePath + "/" + sourceFile;
 
 			if ( isCompressed ) {
@@ -371,7 +371,7 @@ THREE.Loader.prototype = {
 
 		if ( m.mapNormal ) {
 
-			var shader = THREE.ShaderUtils.lib[ "normal" ];
+			var shader = THREE.ShaderLib[ "normalmap" ];
 			var uniforms = THREE.UniformsUtils.clone( shader.uniforms );
 
 			uniforms[ "tNormal" ].value = mpars.normalMap;

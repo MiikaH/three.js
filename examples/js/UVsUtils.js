@@ -137,9 +137,9 @@ THREE.UVsDebug = function(geometry) {
             a.y += u.y;
             
             if (j == 0) {
-                ctx.moveTo(u.x * width, u.y * height);
+                ctx.moveTo(u.x * width, ( 1 - u.y ) * height);
             } else {
-                ctx.lineTo(u.x * width, u.y * height);
+                ctx.lineTo(u.x * width, ( 1 - u.y ) * height);
             }
         }
         
@@ -151,7 +151,7 @@ THREE.UVsDebug = function(geometry) {
         // label the face number
         ctx.font = "12pt Arial bold";
         ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillText(i, a.x * width, a.y * height);
+        ctx.fillText(i, a.x * width, ( 1 - a.y ) * height);
         
         ctx.font = "8pt Arial bold";
         ctx.fillStyle = 'rgba(30,30,0,0.8)';
@@ -160,12 +160,12 @@ THREE.UVsDebug = function(geometry) {
         // label uv edge orders
         for (j = 0, jl = uv.length; j < jl; j++) {
             u = uv[j];
-            b.set(u.x, u.y).subSelf(a).divideScalar(4);
+            b.set(u.x, u.y).sub(a).divideScalar(4);
             
             b.x = u.x - b.x;
             b.y = u.y - b.y;
             ctx.fillText(abc[j]
-                + ':' + faces[i][abc[j]], b.x * width, b.y * height);
+                + ':' + faces[i][abc[j]], b.x * width, ( 1 - b.y ) * height);
         }
     
     }

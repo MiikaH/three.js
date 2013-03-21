@@ -4,9 +4,8 @@
 
 THREE.Ray = function ( origin, direction ) {
 
-
-	this.origin = origin !== undefined ? origin.clone() : new THREE.Vector3();
-	this.direction = direction !== undefined ? direction.clone() : new THREE.Vector3();
+	this.origin = ( origin !== undefined ) ? origin : new THREE.Vector3();
+	this.direction = ( direction !== undefined ) ? direction : new THREE.Vector3();
 
 };
 
@@ -36,36 +35,48 @@ THREE.Ray.prototype = {
 
 		var result = optionalTarget || new THREE.Vector3();
 
-		return result.copy( this.direction ).multiplyScalar( t ).addSelf( this.origin );
+		return result.copy( this.direction ).multiplyScalar( t ).add( this.origin );
 
 	},
 
-	recastSelf: function ( t ) {
+	recast: function() {
 
-		this.origin.copy( this.at( t, THREE.Ray.__v1 ) );
+		var v1 = new THREE.Vector3();
 
-		return this;
+		return function ( t ) {
 
-	},
+			this.origin.copy( this.at( t, v1 ) );
+
+			return this;
+
+		};
+
+	}(),
 
 	closestPointToPoint: function ( point, optionalTarget ) {
 
 		var result = optionalTarget || new THREE.Vector3();
-		result.sub( point, this.origin );
+		result.subVectors( point, this.origin );
 		var directionDistance = result.dot( this.direction );
 
-		return result.copy( this.direction ).multiplyScalar( directionDistance ).addSelf( this.origin );
+		return result.copy( this.direction ).multiplyScalar( directionDistance ).add( this.origin );
 
 	},
 
-	distanceToPoint: function ( point ) {
+	distanceToPoint: function() {
 
-		var directionDistance = THREE.Ray.__v1.sub( point, this.origin ).dot( this.direction );		
-		THREE.Ray.__v1.copy( this.direction ).multiplyScalar( directionDistance ).addSelf( this.origin );
+		var v1 = new THREE.Vector3();
 
-		return THREE.Ray.__v1.distanceTo( point );
+		return function ( point ) {
 
-	},
+			var directionDistance = v1.subVectors( point, this.origin ).dot( this.direction );
+			v1.copy( this.direction ).multiplyScalar( directionDistance ).add( this.origin );
+
+			return v1.distanceTo( point );
+
+		};
+
+	}(),
 
 	isIntersectionSphere: function( sphere ) {
 
@@ -122,7 +133,7 @@ THREE.Ray.prototype = {
 
 		var t = this.distanceToPlane( plane );
 
-		if( t === undefined ) {
+		if ( t === undefined ) {
 
 			return undefined;
 		}
@@ -131,11 +142,11 @@ THREE.Ray.prototype = {
 
 	},
 
-	transform: function ( matrix4 ) {
+	applyMatrix4: function ( matrix4 ) {
 
-		this.direction = matrix4.multiplyVector3( this.direction.addSelf( this.origin ) );
-		this.origin = matrix4.multiplyVector3( this.origin );
-		this.direction.subSelf( this.origin );
+		this.direction.add( this.origin ).applyMatrix4( matrix4 );
+		this.origin.applyMatrix4( matrix4 );
+		this.direction.sub( this.origin );
 
 		return this;
 	},
@@ -153,6 +164,3 @@ THREE.Ray.prototype = {
 	}
 
 };
-
-THREE.Ray.__v1 = new THREE.Vector3();
-THREE.Ray.__v2 = new THREE.Vector3();

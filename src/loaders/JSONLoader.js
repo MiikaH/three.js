@@ -32,8 +32,6 @@ THREE.JSONLoader.prototype.loadAjaxJSON = function ( context, url, callback, tex
 
 	var length = 0;
 
-	xhr.withCredentials = this.withCredentials;
-
 	xhr.onreadystatechange = function () {
 
 		if ( xhr.readyState === xhr.DONE ) {
@@ -43,7 +41,8 @@ THREE.JSONLoader.prototype.loadAjaxJSON = function ( context, url, callback, tex
 				if ( xhr.responseText ) {
 
 					var json = JSON.parse( xhr.responseText );
-					context.createModel( json, callback, texturePath );
+					var result = context.parse( json, texturePath );
+					callback( result.geometry, result.materials );
 
 				} else {
 
@@ -86,11 +85,12 @@ THREE.JSONLoader.prototype.loadAjaxJSON = function ( context, url, callback, tex
 	};
 
 	xhr.open( "GET", url, true );
+	xhr.withCredentials = this.withCredentials;
 	xhr.send( null );
 
 };
 
-THREE.JSONLoader.prototype.createModel = function ( json, callback, texturePath ) {
+THREE.JSONLoader.prototype.parse = function ( json, texturePath ) {
 
 	var scope = this,
 	geometry = new THREE.Geometry(),
@@ -421,8 +421,15 @@ THREE.JSONLoader.prototype.createModel = function ( json, callback, texturePath 
 
 	var materials = this.initMaterials( json.materials, texturePath );
 
-	if ( this.needsTangents( materials ) ) geometry.computeTangents();
+	if ( this.needsTangents( materials ) ) {
 
-	callback( geometry, materials );
+		geometry.computeTangents();
+
+	}
+
+	return {
+		geometry: geometry,
+		materials: materials
+	};
 
 };

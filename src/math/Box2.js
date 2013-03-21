@@ -4,8 +4,8 @@
 
 THREE.Box2 = function ( min, max ) {
 
-	this.min = min !== undefined ? min.clone() : new THREE.Vector2( Infinity, Infinity );
-	this.max = max !== undefined ? max.clone() : new THREE.Vector2( -Infinity, -Infinity );
+	this.min = ( min !== undefined ) ? min : new THREE.Vector2( Infinity, Infinity );
+	this.max = ( max !== undefined ) ? max : new THREE.Vector2( -Infinity, -Infinity );
 
 };
 
@@ -67,15 +67,21 @@ THREE.Box2.prototype = {
 
 	},
 
-	setFromCenterAndSize: function ( center, size ) {
+	setFromCenterAndSize: function () {
 
-		var halfSize = THREE.Box2.__v1.copy( size ).multiplyScalar( 0.5 );
-		this.min.copy( center ).subSelf( halfSize );
-		this.max.copy( center ).addSelf( halfSize );
+		var v1 = new THREE.Vector2();
 
-		return this;
+		return function ( center, size ) {
 
-	},
+			var halfSize = v1.copy( size ).multiplyScalar( 0.5 );
+			this.min.copy( center ).sub( halfSize );
+			this.max.copy( center ).add( halfSize );
+
+			return this;
+
+		};
+
+	}(),
 
 	copy: function ( box ) {
 
@@ -106,29 +112,29 @@ THREE.Box2.prototype = {
 	center: function ( optionalTarget ) {
 
 		var result = optionalTarget || new THREE.Vector2();
-		return result.add( this.min, this.max ).multiplyScalar( 0.5 );
+		return result.addVectors( this.min, this.max ).multiplyScalar( 0.5 );
 
 	},
 
 	size: function ( optionalTarget ) {
 
 		var result = optionalTarget || new THREE.Vector2();
-		return result.sub( this.max, this.min );
+		return result.subVectors( this.max, this.min );
 
 	},
 
 	expandByPoint: function ( point ) {
 
-		this.min.minSelf( point );
-		this.max.maxSelf( point );
+		this.min.min( point );
+		this.max.max( point );
 
 		return this;
 	},
 
 	expandByVector: function ( vector ) {
 
-		this.min.subSelf( vector );
-		this.max.addSelf( vector );
+		this.min.sub( vector );
+		this.max.add( vector );
 
 		return this;
 	},
@@ -143,14 +149,14 @@ THREE.Box2.prototype = {
 
 	containsPoint: function ( point ) {
 
-		if ( ( this.min.x <= point.x ) && ( point.x <= this.max.x ) &&
-		     ( this.min.y <= point.y ) && ( point.y <= this.max.y ) ) {
+		if ( point.x < this.min.x || point.x > this.max.x ||
+		     point.y < this.min.y || point.y > this.max.y ) {
 
-			return true;
+			return false;
 
 		}
 
-		return false;
+		return true;
 
 	},
 
@@ -183,10 +189,8 @@ THREE.Box2.prototype = {
 
 		// using 6 splitting planes to rule out intersections.
 
-		if ( ( box.max.x < this.min.x ) ||
-		     ( box.min.x > this.max.x ) ||
-		     ( box.max.y < this.min.y ) ||
-		     ( box.min.y > this.max.y ) ) {
+		if ( box.max.x < this.min.x || box.min.x > this.max.x ||
+		     box.max.y < this.min.y || box.min.y > this.max.y ) {
 
 			return false;
 
@@ -199,21 +203,27 @@ THREE.Box2.prototype = {
 	clampPoint: function ( point, optionalTarget ) {
 
 		var result = optionalTarget || new THREE.Vector2();
-		return result.copy( point ).clampSelf( this.min, this.max );
+		return result.copy( point ).clamp( this.min, this.max );
 
 	},
 
-	distanceToPoint: function ( point ) {
+	distanceToPoint: function () {
 
-		var clampedPoint = THREE.Box2.__v1.copy( point ).clampSelf( this.min, this.max );
-		return clampedPoint.subSelf( point ).length();
+		var v1 = new THREE.Vector2();
 
-	},
+		return function ( point ) {
+
+			var clampedPoint = v1.copy( point ).clamp( this.min, this.max );
+			return clampedPoint.sub( point ).length();
+
+		};
+
+	}(),
 
 	intersect: function ( box ) {
 
-		this.min.maxSelf( box.min );
-		this.max.minSelf( box.max );
+		this.min.max( box.min );
+		this.max.min( box.max );
 
 		return this;
 
@@ -221,8 +231,8 @@ THREE.Box2.prototype = {
 
 	union: function ( box ) {
 
-		this.min.minSelf( box.min );
-		this.max.maxSelf( box.max );
+		this.min.min( box.min );
+		this.max.max( box.max );
 
 		return this;
 
@@ -230,8 +240,8 @@ THREE.Box2.prototype = {
 
 	translate: function ( offset ) {
 
-		this.min.addSelf( offset );
-		this.max.addSelf( offset );
+		this.min.add( offset );
+		this.max.add( offset );
 
 		return this;
 
@@ -250,5 +260,3 @@ THREE.Box2.prototype = {
 	}
 
 };
-
-THREE.Box2.__v1 = new THREE.Vector2();

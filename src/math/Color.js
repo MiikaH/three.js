@@ -16,58 +16,6 @@ THREE.Color.prototype = {
 
 	r: 1, g: 1, b: 1,
 
-	copy: function ( color ) {
-
-		this.r = color.r;
-		this.g = color.g;
-		this.b = color.b;
-
-		return this;
-
-	},
-
-	copyGammaToLinear: function ( color ) {
-
-		this.r = color.r * color.r;
-		this.g = color.g * color.g;
-		this.b = color.b * color.b;
-
-		return this;
-
-	},
-
-	copyLinearToGamma: function ( color ) {
-
-		this.r = Math.sqrt( color.r );
-		this.g = Math.sqrt( color.g );
-		this.b = Math.sqrt( color.b );
-
-		return this;
-
-	},
-
-	convertGammaToLinear: function () {
-
-		var r = this.r, g = this.g, b = this.b;
-
-		this.r = r * r;
-		this.g = g * g;
-		this.b = b * b;
-
-		return this;
-
-	},
-
-	convertLinearToGamma: function () {
-
-		this.r = Math.sqrt( this.r );
-		this.g = Math.sqrt( this.g );
-		this.b = Math.sqrt( this.b );
-
-		return this;
-
-	},
-
 	set: function ( value ) {
 
 		switch ( typeof value ) {
@@ -84,85 +32,6 @@ THREE.Color.prototype = {
 
 	},
 
-	setRGB: function ( r, g, b ) {
-
-		this.r = r;
-		this.g = g;
-		this.b = b;
-
-		return this;
-
-	},
-
-	setHSV: function ( h, s, v ) {
-
-		// based on MochiKit implementation by Bob Ippolito
-		// h,s,v ranges are < 0.0 - 1.0 >
-
-		var i, f, p, q, t;
-
-		if ( v === 0 ) {
-
-			this.r = this.g = this.b = 0;
-
-		} else {
-
-			i = Math.floor( h * 6 );
-			f = ( h * 6 ) - i;
-			p = v * ( 1 - s );
-			q = v * ( 1 - ( s * f ) );
-			t = v * ( 1 - ( s * ( 1 - f ) ) );
-
-			if ( i === 0 ) {
-
-				this.r = v;
-				this.g = t;
-				this.b = p;
-
-			} else if ( i === 1 ) {
-
-				this.r = q;
-				this.g = v;
-				this.b = p;
-
-			} else if ( i === 2 ) {
-
-				this.r = p;
-				this.g = v;
-				this.b = t;
-
-			} else if ( i === 3 ) {
-
-				this.r = p;
-				this.g = q;
-				this.b = v;
-
-			} else if ( i === 4 ) {
-
-				this.r = t;
-				this.g = p;
-				this.b = v;
-
-			} else if ( i === 5 ) {
-
-				this.r = v;
-				this.g = p;
-				this.b = q;
-
-			}
-
-		}
-
-		return this;
-
-	},
-
-	getHex: function () {
-
-		return ( this.r * 255 ) << 16 ^ ( this.g * 255 ) << 8 ^ ( this.b * 255 ) << 0;
-
-	},
-
 	setHex: function ( hex ) {
 
 		hex = Math.floor( hex );
@@ -175,15 +44,47 @@ THREE.Color.prototype = {
 
 	},
 
-	getHexString: function () {
+	setRGB: function ( r, g, b ) {
 
-		return ( '000000' + this.getHex().toString( 16 ) ).slice( - 6 );
+		this.r = r;
+		this.g = g;
+		this.b = b;
+
+		return this;
 
 	},
 
-	getStyle: function () {
+	setHSL: function ( h, s, l ) {
 
-		return 'rgb(' + ( ( this.r * 255 ) | 0 )  + ',' + ( ( this.g * 255 ) | 0 ) + ',' + ( ( this.b * 255 ) | 0 ) + ')';
+		// h,s,l ranges are in 0.0 - 1.0
+
+		if ( s === 0 ) {
+
+			this.r = this.g = this.b = l;
+
+		} else {
+
+			var hue2rgb = function ( p, q, t ) {
+
+				if ( t < 0 ) t += 1;
+				if ( t > 1 ) t -= 1;
+				if ( t < 1 / 6 ) return p + ( q - p ) * 6 * t;
+				if ( t < 1 / 2 ) return q;
+				if ( t < 2 / 3 ) return p + ( q - p ) * 6 * ( 2 / 3 - t );
+				return p;
+
+			};
+
+			var p = l <= 0.5 ? l * ( 1 + s ) : l + s - ( l * s );
+			var q = ( 2 * l ) - p;
+
+			this.r = hue2rgb( q, p, h + 1 / 3 );
+			this.g = hue2rgb( q, p, h );
+			this.b = hue2rgb( q, p, h - 1 / 3 );
+
+		}
+
+		return this;
 
 	},
 
@@ -254,82 +155,200 @@ THREE.Color.prototype = {
 
 	},
 
-	getHSV: function ( hsv ) {
+	copy: function ( color ) {
 
-		// based on MochiKit implementation by Bob Ippolito
-		// h,s,v ranges are < 0.0 - 1.0 >
+		this.r = color.r;
+		this.g = color.g;
+		this.b = color.b;
 
-		var r = this.r;
-		var g = this.g;
-		var b = this.b;
-
-		var max = Math.max( Math.max( r, g ), b );
-		var min = Math.min( Math.min( r, g ), b );
-
-		var hue;
-		var saturation;
-		var value = max;
-
-		if ( min === max )	{
-
-			hue = 0;
-			saturation = 0;
-
-		} else {
-
-			var delta = ( max - min );
-			saturation = delta / max;
-
-			if ( r === max ) {
-
-				hue = ( g - b ) / delta;
-
-			} else if ( g === max ) {
-
-				hue = 2 + ( ( b - r ) / delta );
-
-			} else	{
-
-				hue = 4 + ( ( r - g ) / delta );
-			}
-
-			hue /= 6;
-
-			if ( hue < 0 ) {
-
-				hue += 1;
-
-			}
-
-			if ( hue > 1 ) {
-
-				hue -= 1;
-
-			}
-
-		}
-
-		if ( hsv === undefined ) {
-
-			hsv = { h: 0, s: 0, v: 0 };
-
-		}
-
-		hsv.h = hue;
-		hsv.s = saturation;
-		hsv.v = value;
-
-		return hsv;
+		return this;
 
 	},
 
-	lerpSelf: function ( color, alpha ) {
+	copyGammaToLinear: function ( color ) {
+
+		this.r = color.r * color.r;
+		this.g = color.g * color.g;
+		this.b = color.b * color.b;
+
+		return this;
+
+	},
+
+	copyLinearToGamma: function ( color ) {
+
+		this.r = Math.sqrt( color.r );
+		this.g = Math.sqrt( color.g );
+		this.b = Math.sqrt( color.b );
+
+		return this;
+
+	},
+
+	convertGammaToLinear: function () {
+
+		var r = this.r, g = this.g, b = this.b;
+
+		this.r = r * r;
+		this.g = g * g;
+		this.b = b * b;
+
+		return this;
+
+	},
+
+	convertLinearToGamma: function () {
+
+		this.r = Math.sqrt( this.r );
+		this.g = Math.sqrt( this.g );
+		this.b = Math.sqrt( this.b );
+
+		return this;
+
+	},
+
+	getHex: function () {
+
+		return ( this.r * 255 ) << 16 ^ ( this.g * 255 ) << 8 ^ ( this.b * 255 ) << 0;
+
+	},
+
+	getHexString: function () {
+
+		return ( '000000' + this.getHex().toString( 16 ) ).slice( - 6 );
+
+	},
+
+	getHSL: function () {
+
+		var hsl = { h: 0, s: 0, l: 0 };
+
+		return function () {
+
+			// h,s,l ranges are in 0.0 - 1.0
+
+			var r = this.r, g = this.g, b = this.b;
+
+			var max = Math.max( r, g, b );
+			var min = Math.min( r, g, b );
+
+			var hue, saturation;
+			var lightness = ( min + max ) / 2.0;
+
+			if ( min === max ) {
+
+				hue = 0;
+				saturation = 0;
+
+			} else {
+
+				var delta = max - min;
+
+				saturation = lightness <= 0.5 ? delta / ( max + min ) : delta / ( 2 - max - min );
+
+				switch ( max ) {
+
+					case r: hue = ( g - b ) / delta + ( g < b ? 6 : 0 ); break;
+					case g: hue = ( b - r ) / delta + 2; break;
+					case b: hue = ( r - g ) / delta + 4; break;
+
+				}
+
+				hue /= 6;
+
+			}
+
+			hsl.h = hue;
+			hsl.s = saturation;
+			hsl.l = lightness;
+
+			return hsl;
+
+		};
+
+	}(),
+
+	getStyle: function () {
+
+		return 'rgb(' + ( ( this.r * 255 ) | 0 ) + ',' + ( ( this.g * 255 ) | 0 ) + ',' + ( ( this.b * 255 ) | 0 ) + ')';
+
+	},
+
+	offsetHSL: function ( h, s, l ) {
+
+		var hsl = this.getHSL();
+
+		hsl.h += h; hsl.s += s; hsl.l += l;
+
+		this.setHSL( hsl.h, hsl.s, hsl.l );
+
+		return this;
+
+	},
+
+	add: function ( color ) {
+
+		this.r += color.r;
+		this.g += color.g;
+		this.b += color.b;
+
+		return this;
+
+	},
+
+	addColors: function ( color1, color2 ) {
+
+		this.r = color1.r + color2.r;
+		this.g = color1.g + color2.g;
+		this.b = color1.b + color2.b;
+
+		return this;
+
+	},
+
+	addScalar: function ( s ) {
+
+		this.r += s;
+		this.g += s;
+		this.b += s;
+
+		return this;
+
+	},
+
+	multiply: function ( color ) {
+
+		this.r *= color.r;
+		this.g *= color.g;
+		this.b *= color.b;
+
+		return this;
+
+	},
+
+	multiplyScalar: function ( s ) {
+
+		this.r *= s;
+		this.g *= s;
+		this.b *= s;
+
+		return this;
+
+	},
+
+	lerp: function ( color, alpha ) {
 
 		this.r += ( color.r - this.r ) * alpha;
 		this.g += ( color.g - this.g ) * alpha;
 		this.b += ( color.b - this.b ) * alpha;
 
 		return this;
+
+	},
+
+	equals: function ( c ) {
+
+		return ( c.r === this.r ) && ( c.g === this.g ) && ( c.b === this.b );
 
 	},
 

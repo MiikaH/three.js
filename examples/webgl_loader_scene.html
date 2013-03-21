@@ -153,6 +153,7 @@
 		<script src="js/loaders/ctm/ctm.js"></script>
 		<script src="js/loaders/ctm/CTMLoader.js"></script>
 
+		<script src="js/loaders/BinaryLoader.js"></script>
 		<script src="js/loaders/OBJLoader.js"></script>
 		<script src="js/loaders/VTKLoader.js"></script>
 		<script src="js/loaders/STLLoader.js"></script>
@@ -287,8 +288,6 @@
 					camera.aspect = window.innerWidth / window.innerHeight;
 					camera.updateProjectionMatrix();
 
-					renderer.setClearColor( result.bgColor, result.bgAlpha );
-
 					*/
 
 					//handle_update( result, 1 );
@@ -308,7 +307,7 @@
 
 					result.scene.traverse( function ( object ) {
 
-						if ( object.properties.rotating === true ) {
+						if ( object.userData.rotating === true ) {
 
 							rotatingObjects.push( object );
 
@@ -344,6 +343,7 @@
 
 				var loader = new THREE.SceneLoader();
 
+				loader.addGeometryHandler( "binary", THREE.BinaryLoader );
 				loader.addGeometryHandler( "ctm", THREE.CTMLoader );
 				loader.addGeometryHandler( "vtk", THREE.VTKLoader );
 				loader.addGeometryHandler( "stl", THREE.STLLoader );
@@ -392,8 +392,6 @@
 				camera.updateProjectionMatrix();
 
 				scene = loaded.scene;
-
-				renderer.setClearColor( loaded.bgColor, loaded.bgAlpha );
 
 			}
 
@@ -481,8 +479,8 @@
 
 					var object = rotatingObjects[ i ];
 
-					if ( object.properties.rotateX ) object.rotation.x += 1 * delta;
-					if ( object.properties.rotateY ) object.rotation.y += 0.5 * delta;
+					if ( object.userData.rotateX ) object.rotation.x += 1 * delta;
+					if ( object.userData.rotateY ) object.rotation.y += 0.5 * delta;
 
 				}
 
