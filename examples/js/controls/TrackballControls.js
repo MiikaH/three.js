@@ -41,6 +41,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 
 	var lastPosition = new THREE.Vector3();
 
+	var _keyPressed = false;
 	var _state = STATE.NONE,
 	_prevState = STATE.NONE,
 
@@ -329,6 +330,13 @@ THREE.TrackballControls = function ( object, domElement ) {
 			_state = STATE.PAN;
 
 		}
+		
+		if ( _state !== STATE.NONE ) {
+
+			_keyPressed = true;
+			document.addEventListener( 'mousemove', mousemove, false );
+
+		}
 
 	}
 
@@ -339,6 +347,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 		_state = _prevState;
 
 		window.addEventListener( 'keydown', keydown, false );
+		document.removeEventListener( 'mousemove', mousemove );
 
 	}
 
@@ -377,6 +386,15 @@ THREE.TrackballControls = function ( object, domElement ) {
 	function mousemove( event ) {
 
 		if ( _this.enabled === false ) return;
+		
+		if ( _keyPressed ) {
+
+			_rotateStart = _rotateEnd = _this.getMouseProjectionOnBall( event.clientX, event.clientY );
+			_zoomStart = _zoomEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
+			_panStart = _panEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
+
+			_keyPressed = false;
+		}
 
 		event.preventDefault();
 		event.stopPropagation();

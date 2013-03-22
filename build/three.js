@@ -7908,8 +7908,16 @@ THREE.Geometry.prototype = {
 			s2 = uvC.x - uvA.x;
 			t1 = uvB.y - uvA.y;
 			t2 = uvC.y - uvA.y;
+			
+			var ts = s1 * t2 - s2 * t1;
+			/* use generated uv values if ts fails */
+			if (!ts) {
+				s1 = 0.5; s2 = 1.0;
+				t1 = 1.0; t2 = 0.5;
+				ts = s1 * t2 - s2 * t1;
+			}
 
-			r = 1.0 / ( s1 * t2 - s2 * t1 );
+			r = 1.0 / ( ts );
 			sdir.set( ( t2 * x1 - t1 * x2 ) * r,
 					  ( t2 * y1 - t1 * y2 ) * r,
 					  ( t2 * z1 - t1 * z2 ) * r );
@@ -7969,6 +7977,8 @@ THREE.Geometry.prototype = {
 				tmp2.crossVectors( face.vertexNormals[ i ], t );
 				test = tmp2.dot( tan2[ vertexIndex ] );
 				w = (test < 0.0) ? -1.0 : 1.0;
+				/* rather use invalid tangent than null vector */
+				if (tmp.x == 0 && tmp.y == 0 && tmp.z == 0) {tmp.x = 1.0;}
 
 				face.vertexTangents[ i ] = new THREE.Vector4( tmp.x, tmp.y, tmp.z, w );
 
@@ -22439,14 +22449,12 @@ THREE.WebGLRenderer = function ( parameters ) {
 		var numMorphTargets = geometry.morphTargets.length;
 		var numMorphNormals = geometry.morphNormals.length;
 
-		var usesFaceMaterial = material instanceof THREE.MeshFaceMaterial;
-
 		geometry.geometryGroups = {};
 
 		for ( f = 0, fl = geometry.faces.length; f < fl; f ++ ) {
 
 			face = geometry.faces[ f ];
-			materialIndex = usesFaceMaterial ? face.materialIndex : 0;
+			materialIndex = face.materialIndex;
 
 			if ( hash_map[ materialIndex ] === undefined ) {
 
