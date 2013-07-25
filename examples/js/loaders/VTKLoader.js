@@ -2,11 +2,7 @@
  * @author mrdoob / http://mrdoob.com/
  */
 
-THREE.VTKLoader = function () {
-
-	THREE.EventDispatcher.call( this );
-
-};
+THREE.VTKLoader = function () {};
 
 THREE.VTKLoader.prototype = {
 
@@ -113,4 +109,6 @@ THREE.VTKLoader.prototype = {
 
 	}
 
-}
+};
+
+THREE.EventDispatcher.prototype.apply( THREE.VTKLoader.prototype );

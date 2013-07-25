@@ -4,16 +4,17 @@
  * @author angelxuanchang
  */
 
-THREE.MTLLoader = function( baseUrl, options ) {
+THREE.MTLLoader = function( baseUrl, options, crossOrigin ) {
 
-	THREE.EventDispatcher.call( this );
-	
 	this.baseUrl = baseUrl;
 	this.options = options;
+	this.crossOrigin = crossOrigin;
 
 };
 
 THREE.MTLLoader.prototype = {
+
+	constructor: THREE.MTLLoader,
 
 	/**
 	 * Loads a MTL file
@@ -150,8 +151,6 @@ THREE.MTLLoader.prototype = {
 
 THREE.MTLLoader.MaterialCreator = function( baseUrl, options ) {
 
-	THREE.EventDispatcher.call( this );
-
 	this.baseUrl = baseUrl;
 	this.options = options;
 	this.materialsInfo = {};
@@ -165,6 +164,8 @@ THREE.MTLLoader.MaterialCreator = function( baseUrl, options ) {
 };
 
 THREE.MTLLoader.MaterialCreator.prototype = {
+
+	constructor: THREE.MTLLoader.MaterialCreator,
 
 	setMaterials: function( materialsInfo ) {
 
@@ -348,7 +349,7 @@ THREE.MTLLoader.MaterialCreator.prototype = {
 
 					// Diffuse texture map
 
-					params[ 'map' ] = THREE.MTLLoader.loadTexture( this.baseUrl + value );
+					params[ 'map' ] = this.loadTexture( this.baseUrl + value );
 					params[ 'map' ].wrapS = this.wrap;
 					params[ 'map' ].wrapT = this.wrap;
 
@@ -395,45 +396,38 @@ THREE.MTLLoader.MaterialCreator.prototype = {
 		this.materials[ materialName ] = new THREE.MeshPhongMaterial( params );
 		return this.materials[ materialName ];
 
-	}
+	},
 
-};
 
-THREE.MTLLoader.loadTexture = function ( url, mapping, onLoad, onError ) {
+	loadTexture: function ( url, mapping, onLoad, onError ) {
 
-	var isCompressed = /\.dds$/i.test( url );
+		var isCompressed = /\.dds$/i.test( url );
 
-	if ( isCompressed ) {
+		if ( isCompressed ) {
 
-		var texture = THREE.ImageUtils.loadCompressedTexture( url, mapping, onLoad, onError );
+			var texture = THREE.ImageUtils.loadCompressedTexture( url, mapping, onLoad, onError );
 
-	} else {
+		} else {
 
-		var image = new Image();
-		var texture = new THREE.Texture( image, mapping );
+			var image = new Image();
+			var texture = new THREE.Texture( image, mapping );
 
-		var loader = new THREE.ImageLoader();
+			var loader = new THREE.ImageLoader();
+			loader.crossOrigin = this.crossOrigin;
+			loader.load( url, function ( image ) {
 
-		loader.addEventListener( 'load', function ( event ) {
+				texture.image = THREE.MTLLoader.ensurePowerOfTwo_( image );
+				texture.needsUpdate = true;
 
-			texture.image = THREE.MTLLoader.ensurePowerOfTwo_( event.content );
-			texture.needsUpdate = true;
-			if ( onLoad ) onLoad( texture );
+				if ( onLoad ) onLoad( texture );
 
-		} );
+			} );
 
-		loader.addEventListener( 'error', function ( event ) {
+		}
 
-			if ( onError ) onError( event.message );
-
-		} );
-
-		loader.crossOrigin = this.crossOrigin;
-		loader.load( url, image );
+		return texture;
 
 	}
-
-	return texture;
 
 };
 
@@ -475,3 +469,4 @@ THREE.MTLLoader.nextHighestPowerOfTwo_ = function( x ) {
 
 };
 
+THREE.EventDispatcher.prototype.apply( THREE.MTLLoader.prototype );

@@ -78,7 +78,11 @@ THREE.JSONLoader.prototype.loadAjaxJSON = function ( context, url, callback, tex
 
 		} else if ( xhr.readyState === xhr.HEADERS_RECEIVED ) {
 
-			length = xhr.getResponseHeader( "Content-Length" );
+			if ( callbackProgress !== undefined ) {
+
+				length = xhr.getResponseHeader( "Content-Length" );
+
+			}
 
 		}
 
@@ -103,6 +107,7 @@ THREE.JSONLoader.prototype.parse = function ( json, texturePath ) {
 
 	geometry.computeCentroids();
 	geometry.computeFaceNormals();
+	geometry.computeBoundingSphere();
 
 	function parseModel( scale ) {
 
@@ -136,18 +141,22 @@ THREE.JSONLoader.prototype.parse = function ( json, texturePath ) {
 
 		nUvLayers = 0;
 
-		// disregard empty arrays
+		if ( json.uvs !== undefined ) {
 
-		for ( i = 0; i < json.uvs.length; i++ ) {
+			// disregard empty arrays
 
-			if ( json.uvs[ i ].length ) nUvLayers ++;
+			for ( i = 0; i < json.uvs.length; i++ ) {
 
-		}
+				if ( json.uvs[ i ].length ) nUvLayers ++;
 
-		for ( i = 0; i < nUvLayers; i++ ) {
+			}
 
-			geometry.faceUvs[ i ] = [];
-			geometry.faceVertexUvs[ i ] = [];
+			for ( i = 0; i < nUvLayers; i++ ) {
+
+				geometry.faceUvs[ i ] = [];
+				geometry.faceVertexUvs[ i ] = [];
+
+			}
 
 		}
 
@@ -174,7 +183,7 @@ THREE.JSONLoader.prototype.parse = function ( json, texturePath ) {
 			type = faces[ offset ++ ];
 
 
-			isQuad          	= isBitSet( type, 0 );
+			isQuad              = isBitSet( type, 0 );
 			hasMaterial         = isBitSet( type, 1 );
 			hasFaceUv           = isBitSet( type, 2 );
 			hasFaceVertexUv     = isBitSet( type, 3 );
@@ -419,17 +428,22 @@ THREE.JSONLoader.prototype.parse = function ( json, texturePath ) {
 
 	};
 
-	var materials = this.initMaterials( json.materials, texturePath );
+	if ( json.materials === undefined ) {
 
-	if ( this.needsTangents( materials ) ) {
+		return { geometry: geometry };
 
-		geometry.computeTangents();
+	} else {
+
+		var materials = this.initMaterials( json.materials, texturePath );
+
+		if ( this.needsTangents( materials ) ) {
+
+			geometry.computeTangents();
+
+		}
+
+		return { geometry: geometry, materials: materials };
 
 	}
-
-	return {
-		geometry: geometry,
-		materials: materials
-	};
 
 };

@@ -21,8 +21,22 @@ THREE.WebGLRenderer = function ( parameters ) {
 	_stencil = parameters.stencil !== undefined ? parameters.stencil : true,
 	_preserveDrawingBuffer = parameters.preserveDrawingBuffer !== undefined ? parameters.preserveDrawingBuffer : false,
 
-	_clearColor = parameters.clearColor !== undefined ? new THREE.Color( parameters.clearColor ) : new THREE.Color( 0x000000 ),
-	_clearAlpha = parameters.clearAlpha !== undefined ? parameters.clearAlpha : 0;
+	_clearColor = new THREE.Color( 0x000000 ),
+	_clearAlpha = 0;
+
+	if ( parameters.clearColor !== undefined ) {
+
+		console.warn( 'DEPRECATED: clearColor in WebGLRenderer constructor parameters is being removed. Use .setClearColor() instead.' );
+		_clearColor.setHex( parameters.clearColor );
+
+	}
+
+	if ( parameters.clearAlpha !== undefined ) {
+
+		console.warn( 'DEPRECATED: clearAlpha in WebGLRenderer constructor parameters is being removed. Use .setClearColor() instead.' );
+		_clearAlpha = parameters.clearAlpha;
+
+	}
 
 	// public properties
 
@@ -44,9 +58,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 	// scene graph
 
 	this.sortObjects = true;
-
 	this.autoUpdateObjects = true;
-	this.autoUpdateScene = true;
 
 	// physically based shading
 
@@ -179,6 +191,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 	var _gl;
 
 	var _glExtensionTextureFloat;
+	var _glExtensionTextureFloatLinear;
 	var _glExtensionStandardDerivatives;
 	var _glExtensionTextureFilterAnisotropic;
 	var _glExtensionCompressedTextureS3TC;
@@ -293,13 +306,17 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	this.setSize = function ( width, height ) {
+	this.setSize = function ( width, height, updateStyle ) {
 
 		_canvas.width = width * this.devicePixelRatio;
 		_canvas.height = height * this.devicePixelRatio;
 
-		_canvas.style.width = width + 'px';
-		_canvas.style.height = height + 'px';
+		if ( this.devicePixelRatio !== 1 && updateStyle !== false ) {
+
+			_canvas.style.width = width + 'px';
+			_canvas.style.height = height + 'px';
+
+		}
 
 		this.setViewport( 0, 0, _canvas.width, _canvas.height );
 
@@ -331,21 +348,19 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Clearing
 
-	this.setClearColorHex = function ( hex, alpha ) {
+	this.setClearColor = function ( color, alpha ) {
 
-		_clearColor.setHex( hex );
-		_clearAlpha = alpha;
+		_clearColor.set( color );
+		_clearAlpha = alpha !== undefined ? alpha : 1;
 
 		_gl.clearColor( _clearColor.r, _clearColor.g, _clearColor.b, _clearAlpha );
 
 	};
 
-	this.setClearColor = function ( color, alpha ) {
+	this.setClearColorHex = function ( hex, alpha ) {
 
-		_clearColor.copy( color );
-		_clearAlpha = alpha;
-
-		_gl.clearColor( _clearColor.r, _clearColor.g, _clearColor.b, _clearAlpha );
+		console.warn( 'DEPRECATED: .setClearColorHex() is being removed. Use .setClearColor() instead.' );
+		this.setClearColor( hex, alpha );
 
 	};
 
@@ -710,86 +725,6 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	//
 
-	/*
-	function deleteParticleBuffers ( geometry ) {
-
-		_gl.deleteBuffer( geometry.__webglVertexBuffer );
-		_gl.deleteBuffer( geometry.__webglColorBuffer );
-
-		deleteCustomAttributesBuffers( geometry );
-
-		_this.info.memory.geometries --;
-
-	};
-
-	function deleteLineBuffers ( geometry ) {
-
-		_gl.deleteBuffer( geometry.__webglVertexBuffer );
-		_gl.deleteBuffer( geometry.__webglColorBuffer );
-		_gl.deleteBuffer( geometry.__webglLineDistanceBuffer );
-
-		deleteCustomAttributesBuffers( geometry );
-
-		_this.info.memory.geometries --;
-
-	};
-
-	function deleteRibbonBuffers ( geometry ) {
-
-		_gl.deleteBuffer( geometry.__webglVertexBuffer );
-		_gl.deleteBuffer( geometry.__webglColorBuffer );
-		_gl.deleteBuffer( geometry.__webglNormalBuffer );
-
-		deleteCustomAttributesBuffers( geometry );
-
-		_this.info.memory.geometries --;
-
-	};
-
-	function deleteMeshBuffers ( geometryGroup ) {
-
-		_gl.deleteBuffer( geometryGroup.__webglVertexBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglNormalBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglTangentBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglColorBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglUVBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglUV2Buffer );
-
-		_gl.deleteBuffer( geometryGroup.__webglSkinIndicesBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglSkinWeightsBuffer );
-
-		_gl.deleteBuffer( geometryGroup.__webglFaceBuffer );
-		_gl.deleteBuffer( geometryGroup.__webglLineBuffer );
-
-		var m, ml;
-
-		if ( geometryGroup.numMorphTargets ) {
-
-			for ( m = 0, ml = geometryGroup.numMorphTargets; m < ml; m ++ ) {
-
-				_gl.deleteBuffer( geometryGroup.__webglMorphTargetsBuffers[ m ] );
-
-			}
-
-		}
-
-		if ( geometryGroup.numMorphNormals ) {
-
-			for ( m = 0, ml = geometryGroup.numMorphNormals; m < ml; m ++ ) {
-
-				_gl.deleteBuffer( geometryGroup.__webglMorphNormalsBuffers[ m ] );
-
-			}
-
-		}
-
-		deleteCustomAttributesBuffers( geometryGroup );
-
-		_this.info.memory.geometries --;
-
-	};
-	*/
-
 	function deleteCustomAttributesBuffers( geometry ) {
 
 		if ( geometry.__webglCustomAttributesList ) {
@@ -1135,6 +1070,12 @@ THREE.WebGLRenderer = function ( parameters ) {
 			}
 
 			attribute = geometry.attributes[ a ];
+
+			if ( attribute.numItems === undefined ) {
+
+				attribute.numItems = attribute.array.length;
+
+			}
 
 			attribute.buffer = _gl.createBuffer();
 
@@ -3269,7 +3210,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 			if ( dispose && ! attributeItem.dynamic ) {
 
-				delete attributeItem.array;
+				attributeItem.array = null;
 
 			}
 
@@ -3376,13 +3317,13 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( material.visible === false ) return;
 
-		var program, programAttributes, linewidth, primitives, a, attribute, geometryAttributes;
+		var linewidth, a, attribute;
 		var attributeItem, attributeName, attributePointer, attributeSize;
 
-		program = setProgram( camera, lights, fog, material, object );
+		var program = setProgram( camera, lights, fog, material, object );
 
-		programAttributes = program.attributes;
-		geometryAttributes = geometry.attributes;
+		var programAttributes = program.attributes;
+		var geometryAttributes = geometry.attributes;
 
 		var updateBuffers = false,
 			wireframeBit = material.wireframe ? 1 : 0,
@@ -3552,11 +3493,13 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 				// render lines
 
+				var primitives = ( object.type === THREE.LineStrip ) ? _gl.LINE_STRIP : _gl.LINES;
+
 				setLineWidth( material.linewidth );
 
 				var position = geometryAttributes[ "position" ];
 
-				_gl.drawArrays( _gl.LINE_STRIP, 0, position.numItems / 3 );
+				_gl.drawArrays( primitives, 0, position.numItems / 3 );
 
 				_this.info.render.calls ++;
 				_this.info.render.points += position.numItems;
@@ -3571,11 +3514,11 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( material.visible === false ) return;
 
-		var program, attributes, linewidth, primitives, a, attribute, i, il;
+		var linewidth, a, attribute, i, il;
 
-		program = setProgram( camera, lights, fog, material, object );
+		var program = setProgram( camera, lights, fog, material, object );
 
-		attributes = program.attributes;
+		var attributes = program.attributes;
 
 		var updateBuffers = false,
 			wireframeBit = material.wireframe ? 1 : 0,
@@ -3745,7 +3688,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		} else if ( object instanceof THREE.Line ) {
 
-			primitives = ( object.type === THREE.LineStrip ) ? _gl.LINE_STRIP : _gl.LINES;
+			var primitives = ( object.type === THREE.LineStrip ) ? _gl.LINE_STRIP : _gl.LINES;
 
 			setLineWidth( material.linewidth );
 
@@ -3955,7 +3898,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		} else {
 
-			return b.id - a.id;
+			return a.id - b.id;
 
 		}
 
@@ -3994,7 +3937,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		// update scene graph
 
-		if ( this.autoUpdateScene ) scene.updateMatrixWorld();
+		if ( scene.autoUpdate === true ) scene.updateMatrixWorld();
 
 		// update camera matrices and frustum
 
@@ -4037,6 +3980,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 			webglObject = renderList[ i ];
 			object = webglObject.object;
 
+			webglObject.id = i;
 			webglObject.render = false;
 
 			if ( object.visible ) {
@@ -4063,8 +4007,6 @@ THREE.WebGLRenderer = function ( parameters ) {
 							webglObject.z = _vector3.z;
 
 						}
-
-						webglObject.id = object.id;
 
 					}
 
@@ -4484,7 +4426,23 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		for ( var o = 0, ol = scene.__webglObjects.length; o < ol; o ++ ) {
 
-			updateObject( scene.__webglObjects[ o ].object );
+			var object = scene.__webglObjects[ o ].object;
+
+			// TODO: Remove this hack (WebGLRenderer refactoring)
+
+			if ( object.__webglInit === undefined ) {
+
+				if ( object.__webglActive !== undefined ) {
+
+					removeObject( object, scene );
+
+				}
+
+				addObject( object, scene );
+
+			}
+
+			updateObject( object );
 
 		}
 
@@ -4492,11 +4450,11 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Objects adding
 
-	function addObject ( object, scene ) {
+	function addObject( object, scene ) {
 
 		var g, geometry, material, geometryGroup;
 
-		if ( ! object.__webglInit ) {
+		if ( object.__webglInit === undefined ) {
 
 			object.__webglInit = true;
 
@@ -4597,7 +4555,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		}
 
-		if ( ! object.__webglActive ) {
+		if ( object.__webglActive === undefined ) {
 
 			if ( object instanceof THREE.Mesh ) {
 
@@ -4646,26 +4604,30 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function addBuffer ( objlist, buffer, object ) {
+	function addBuffer( objlist, buffer, object ) {
 
 		objlist.push(
 			{
+				id: null,
 				buffer: buffer,
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0
 			}
 		);
 
 	};
 
-	function addBufferImmediate ( objlist, object ) {
+	function addBufferImmediate( objlist, object ) {
 
 		objlist.push(
 			{
+				id: null,
 				object: object,
 				opaque: null,
-				transparent: null
+				transparent: null,
+				z: 0
 			}
 		);
 
@@ -4673,7 +4635,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Objects updates
 
-	function updateObject ( object ) {
+	function updateObject( object ) {
 
 		var geometry = object.geometry,
 			geometryGroup, customAttributesDirty, material;
@@ -4782,7 +4744,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Objects updates - custom attributes check
 
-	function areCustomAttributesDirty ( material ) {
+	function areCustomAttributesDirty( material ) {
 
 		for ( var a in material.attributes ) {
 
@@ -4794,7 +4756,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function clearCustomAttributes ( material ) {
+	function clearCustomAttributes( material ) {
 
 		for ( var a in material.attributes ) {
 
@@ -4806,7 +4768,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Objects removal
 
-	function removeObject ( object, scene ) {
+	function removeObject( object, scene ) {
 
 		if ( object instanceof THREE.Mesh  ||
 			 object instanceof THREE.ParticleSystem ||
@@ -4829,11 +4791,11 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		}
 
-		object.__webglActive = false;
+		delete object.__webglActive;
 
 	};
 
-	function removeInstances ( objlist, object ) {
+	function removeInstances( objlist, object ) {
 
 		for ( var o = objlist.length - 1; o >= 0; o -- ) {
 
@@ -4847,7 +4809,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function removeInstancesDirect ( objlist, object ) {
+	function removeInstancesDirect( objlist, object ) {
 
 		for ( var o = objlist.length - 1; o >= 0; o -- ) {
 
@@ -5688,6 +5650,10 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 				}
 
+			} else {
+
+				console.warn( 'THREE.WebGLRenderer: Unknown uniform type: ' + type );
+
 			}
 
 		}
@@ -5697,9 +5663,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 	function setupMatrices ( object, camera ) {
 
 		object._modelViewMatrix.multiplyMatrices( camera.matrixWorldInverse, object.matrixWorld );
-
-		object._normalMatrix.getInverse( object._modelViewMatrix );
-		object._normalMatrix.transpose();
+		object._normalMatrix.getNormalMatrix( object._modelViewMatrix );
 
 	};
 
@@ -6429,8 +6393,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		].join("\n");
 
-		var glFragmentShader = getShader( "fragment", prefix_fragment + fragmentShader );
 		var glVertexShader = getShader( "vertex", prefix_vertex + vertexShader );
+		var glFragmentShader = getShader( "fragment", prefix_fragment + fragmentShader );
 
 		_gl.attachShader( program, glVertexShader );
 		_gl.attachShader( program, glFragmentShader );
@@ -6778,6 +6742,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 			if ( texture.needsUpdate ) {
 
 				if ( ! texture.image.__webglTextureCube ) {
+
+					texture.addEventListener( 'dispose', onTextureDispose );
 
 					texture.image.__webglTextureCube = _gl.createTexture();
 
@@ -7187,15 +7153,16 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function allocateLights ( lights ) {
+	function allocateLights( lights ) {
 
-		var l, ll, light, dirLights, pointLights, spotLights, hemiLights;
+		var dirLights = 0;
+		var pointLights = 0;
+		var spotLights = 0;
+		var hemiLights = 0;
 
-		dirLights = pointLights = spotLights = hemiLights = 0;
+		for ( var l = 0, ll = lights.length; l < ll; l ++ ) {
 
-		for ( l = 0, ll = lights.length; l < ll; l ++ ) {
-
-			light = lights[ l ];
+			var light = lights[ l ];
 
 			if ( light.onlyShadow ) continue;
 
@@ -7210,13 +7177,13 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function allocateShadows ( lights ) {
+	function allocateShadows( lights ) {
 
-		var l, ll, light, maxShadows = 0;
+		var maxShadows = 0;
 
-		for ( l = 0, ll = lights.length; l < ll; l++ ) {
+		for ( var l = 0, ll = lights.length; l < ll; l++ ) {
 
-			light = lights[ l ];
+			var light = lights[ l ];
 
 			if ( ! light.castShadow ) continue;
 
@@ -7231,7 +7198,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// Initialization
 
-	function initGL () {
+	function initGL() {
 
 		try {
 
@@ -7248,16 +7215,12 @@ THREE.WebGLRenderer = function ( parameters ) {
 		}
 
 		_glExtensionTextureFloat = _gl.getExtension( 'OES_texture_float' );
+		_glExtensionTextureFloatLinear = _gl.getExtension( 'OES_texture_float_linear' );
 		_glExtensionStandardDerivatives = _gl.getExtension( 'OES_standard_derivatives' );
 
-		_glExtensionTextureFilterAnisotropic = _gl.getExtension( 'EXT_texture_filter_anisotropic' ) ||
-											   _gl.getExtension( 'MOZ_EXT_texture_filter_anisotropic' ) ||
-											   _gl.getExtension( 'WEBKIT_EXT_texture_filter_anisotropic' );
+		_glExtensionTextureFilterAnisotropic = _gl.getExtension( 'EXT_texture_filter_anisotropic' ) || _gl.getExtension( 'MOZ_EXT_texture_filter_anisotropic' ) || _gl.getExtension( 'WEBKIT_EXT_texture_filter_anisotropic' );
 
-
-		_glExtensionCompressedTextureS3TC = _gl.getExtension( 'WEBGL_compressed_texture_s3tc' ) ||
-											_gl.getExtension( 'MOZ_WEBGL_compressed_texture_s3tc' ) ||
-											_gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_s3tc' );
+		_glExtensionCompressedTextureS3TC = _gl.getExtension( 'WEBGL_compressed_texture_s3tc' ) || _gl.getExtension( 'MOZ_WEBGL_compressed_texture_s3tc' ) || _gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_s3tc' );
 
 		if ( ! _glExtensionTextureFloat ) {
 

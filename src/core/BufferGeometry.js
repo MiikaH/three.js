@@ -4,9 +4,8 @@
 
 THREE.BufferGeometry = function () {
 
-	THREE.EventDispatcher.call( this );
-
 	this.id = THREE.GeometryIdCount ++;
+	this.uuid = THREE.Math.generateUUID();
 
 	// attributes
 
@@ -35,7 +34,7 @@ THREE.BufferGeometry = function () {
 
 THREE.BufferGeometry.prototype = {
 
-	constructor : THREE.BufferGeometry,
+	constructor: THREE.BufferGeometry,
 
 	applyMatrix: function ( matrix ) {
 
@@ -54,8 +53,7 @@ THREE.BufferGeometry.prototype = {
 
 		if ( normalArray !== undefined ) {
 
-			var normalMatrix = new THREE.Matrix3();
-			normalMatrix.getInverse( matrix ).transpose();
+			var normalMatrix = new THREE.Matrix3().getNormalMatrix( matrix );
 
 			normalMatrix.multiplyVector3Array( normalArray );
 
@@ -185,8 +183,7 @@ THREE.BufferGeometry.prototype = {
 				this.attributes[ "normal" ] = {
 
 					itemSize: 3,
-					array: new Float32Array( nVertexElements ),
-					numItems: nVertexElements
+					array: new Float32Array( nVertexElements )
 
 				};
 
@@ -369,8 +366,7 @@ THREE.BufferGeometry.prototype = {
 			this.attributes[ "tangent" ] = {
 
 				itemSize: 4,
-				array: new Float32Array( nTangentElements ),
-				numItems: nTangentElements
+				array: new Float32Array( nTangentElements )
 
 			};
 
@@ -511,7 +507,7 @@ THREE.BufferGeometry.prototype = {
 			test = tmp2.dot( tan2[ v ] );
 			w = ( test < 0.0 ) ? -1.0 : 1.0;
 
-			tangents[ v * 4 ] 	  = tmp.x;
+			tangents[ v * 4 ]     = tmp.x;
 			tangents[ v * 4 + 1 ] = tmp.y;
 			tangents[ v * 4 + 2 ] = tmp.z;
 			tangents[ v * 4 + 3 ] = w;
@@ -551,3 +547,4 @@ THREE.BufferGeometry.prototype = {
 
 };
 
+THREE.EventDispatcher.prototype.apply( THREE.BufferGeometry.prototype );
