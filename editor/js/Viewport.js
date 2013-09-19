@@ -12,6 +12,7 @@ var Viewport = function ( editor ) {
 	info.setBottom( '5px' );
 	info.setFontSize( '12px' );
 	info.setColor( '#ffffff' );
+	info.setValue( 'objects: 0, vertices: 0, faces: 0' );
 	container.add( info );
 
 	var scene = editor.scene;
@@ -42,13 +43,13 @@ var Viewport = function ( editor ) {
 	var transformControls = new THREE.TransformControls( camera, container.dom );
 	transformControls.addEventListener( 'change', function () {
 
-		// TODO: Differentiate from transform hovers change and object transform change
-
-		signals.objectChanged.dispatch( editor.selected );
+        controls.enabled = true;
+        if ( transformControls.axis ) controls.enabled = false;
+        
+		if (editor.selected) signals.objectChanged.dispatch( editor.selected );
 
 	} );
-	sceneHelpers.add( transformControls.gizmo );
-	transformControls.hide();
+	sceneHelpers.add( transformControls );
 
 	// fog
 
@@ -67,11 +68,10 @@ var Viewport = function ( editor ) {
 
 	var getIntersects = function ( event, object ) {
 
-		var vector = new THREE.Vector3(
-			( event.layerX / container.dom.offsetWidth ) * 2 - 1,
-			- ( event.layerY / container.dom.offsetHeight ) * 2 + 1,
-			0.5
-		);
+	    var rect = container.dom.getBoundingClientRect();
+	    x = (event.clientX - rect.left) / rect.width;
+	    y = (event.clientY - rect.top) / rect.height;
+		var vector = new THREE.Vector3( ( x ) * 2 - 1, - ( y ) * 2 + 1, 0.5 );
 
 		projector.unprojectVector( vector, camera );
 
@@ -79,11 +79,11 @@ var Viewport = function ( editor ) {
 
 		if ( object instanceof Array ) {
 
-			return ray.intersectObjects( object, true );
+			return ray.intersectObjects( object );
 
 		}
 
-		return ray.intersectObject( object, true );
+		return ray.intersectObject( object );
 
 	};
 
@@ -94,22 +94,23 @@ var Viewport = function ( editor ) {
 
 		event.preventDefault();
 
-		onMouseDownPosition.set( event.layerX, event.layerY );
+	    var rect = container.dom.getBoundingClientRect();
+	    x = (event.clientX - rect.left) / rect.width;
+	    y = (event.clientY - rect.top) / rect.height;
+		onMouseDownPosition.set( x, y );
 
-		if ( transformControls.hovered === false ) {
-
-			controls.enabled = true;
-			document.addEventListener( 'mouseup', onMouseUp, false );
-
-		}
+		document.addEventListener( 'mouseup', onMouseUp, false );
 
 	};
 
 	var onMouseUp = function ( event ) {
 
-		onMouseUpPosition.set( event.layerX, event.layerY );
+	    var rect = container.dom.getBoundingClientRect();
+	    x = (event.clientX - rect.left) / rect.width;
+	    y = (event.clientY - rect.top) / rect.height;
+		onMouseUpPosition.set( x, y );
 
-		if ( onMouseDownPosition.distanceTo( onMouseUpPosition ) < 1 ) {
+		if ( onMouseDownPosition.distanceTo( onMouseUpPosition ) == 0 ) {
 
 			var intersects = getIntersects( event, objects );
 
@@ -138,8 +139,6 @@ var Viewport = function ( editor ) {
 			render();
 
 		}
-
-		controls.enabled = false;
 
 		document.removeEventListener( 'mouseup', onMouseUp );
 
@@ -170,26 +169,24 @@ var Viewport = function ( editor ) {
 		signals.objectChanged.dispatch( camera );
 
 	} );
-	controls.enabled = false;
 
 	// signals
 
 	signals.transformModeChanged.add( function ( mode ) {
 
 		transformControls.setMode( mode );
-		render();
 
 	} );
 
 	signals.snapChanged.add( function ( dist ) {
 
-		transformControls.snapDist = dist;
+		transformControls.setSnap( dist );
 
 	} );
 
-	signals.snapChanged.add( function ( dist ) {
+	signals.spaceChanged.add( function ( space ) {
 
-		snapDist = dist;
+		transformControls.setSpace( space );
 
 	} );
 
@@ -244,46 +241,59 @@ var Viewport = function ( editor ) {
 
 	signals.objectAdded.add( function ( object ) {
 
-		if ( object instanceof THREE.Light ) {
+		var materialsNeedUpdate = false;
 
-			updateMaterials();
+		object.traverse( function ( child ) {
 
-		}
+			if ( child instanceof THREE.Light ) materialsNeedUpdate = true;
 
-		objects.push( object );
+			objects.push( child );
+
+		} );
+
+		if ( materialsNeedUpdate === true ) updateMaterials();
 
 	} );
 
 	signals.objectChanged.add( function ( object ) {
 
-		if ( object.geometry !== undefined ) {
-
-			selectionBox.update( object );
-
-		}
-
-		if ( editor.helpers[ object.id ] !== undefined ) {
-
-			editor.helpers[ object.id ].update();
-
-		}
-
 		transformControls.update();
 
+		if ( object !== camera ) {
+
+			if ( object.geometry !== undefined ) {
+
+				selectionBox.update( object );
+
+			}
+
+			if ( editor.helpers[ object.id ] !== undefined ) {
+
+				editor.helpers[ object.id ].update();
+
+			}
+
+			updateInfo();
+
+		}
+
 		render();
-		updateInfo();
 
 	} );
 
 	signals.objectRemoved.add( function ( object ) {
 
-		if ( object instanceof THREE.Light ) {
+		var materialsNeedUpdate = false;
 
-			updateMaterials();
+		object.traverse( function ( child ) {
 
-		}
+			if ( child instanceof THREE.Light ) materialsNeedUpdate = true;
 
-		objects.splice( objects.indexOf( object ), 1 );
+			objects.splice( objects.indexOf( child ), 1 );
+
+		} );
+
+		if ( materialsNeedUpdate === true ) updateMaterials();
 
 	} );
 
@@ -378,12 +388,14 @@ var Viewport = function ( editor ) {
 	signals.playAnimations.add( function (animations) {
 		
 		function animate() {
+
 			requestAnimationFrame( animate );
 			
-			for (var i = 0; i < animations.length ; i++ ){
-				animations[i].update(0.016);
-			} 
+			for ( var i = 0; i < animations.length ; i ++ ) {
 
+				animations[i].update(0.016);
+
+			} 
 
 			render();
 		}
@@ -426,8 +438,29 @@ var Viewport = function ( editor ) {
 			if ( object instanceof THREE.Mesh ) {
 
 				objects ++;
-				vertices += object.geometry.vertices.length;
-				faces += object.geometry.faces.length;
+
+				var geometry = object.geometry;
+
+				if ( geometry instanceof THREE.Geometry ) {
+
+					vertices += geometry.vertices.length;
+					faces += geometry.faces.length;
+
+				} else if ( geometry instanceof THREE.BufferGeometry ) {
+
+					vertices += geometry.attributes.position.array.length / 3;
+
+					if ( geometry.attributes.index !== undefined ) {
+
+						faces += geometry.attributes.index.array.length / 3;
+
+					} else {
+
+						faces += vertices / 3;
+
+					}
+
+				}
 
 			}
 
@@ -489,6 +522,8 @@ var Viewport = function ( editor ) {
 		renderer.clear();
 		renderer.render( scene, camera );
 		renderer.render( sceneHelpers, camera );
+
+		//console.trace();
 
 	}
 

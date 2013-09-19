@@ -2,8 +2,6 @@ Sidebar.Scene = function ( editor ) {
 
 	var signals = editor.signals;
 
-	var selected = null;
-
 	var container = new UI.Panel();
 	container.setPadding( '10px' );
 	container.setBorderTop( '1px solid #ccc' );
@@ -11,7 +9,7 @@ Sidebar.Scene = function ( editor ) {
 	container.add( new UI.Text( 'SCENE' ).setColor( '#666' ) );
 	container.add( new UI.Break(), new UI.Break() );
 
-	var outliner = new UI.FancySelect().setWidth( '100%' ).setHeight('140px').setColor( '#444' ).setFontSize( '12px' )
+	var outliner = new UI.FancySelect().setId( 'outliner' ).setWidth( '100%' ).setHeight('140px').setColor( '#444' ).setFontSize( '12px' );
 	outliner.onChange( function () {
 
 		editor.selectById( parseInt( outliner.getValue() ) );
@@ -109,30 +107,6 @@ Sidebar.Scene = function ( editor ) {
 
 	//
 
-	var getObjectType = function ( object ) {
-
-		var objects = {
-
-			'Scene': THREE.Scene,
-			'PerspectiveCamera': THREE.PerspectiveCamera,
-			'AmbientLight': THREE.AmbientLight,
-			'DirectionalLight': THREE.DirectionalLight,
-			'HemisphereLight': THREE.HemisphereLight,
-			'PointLight': THREE.PointLight,
-			'SpotLight': THREE.SpotLight,
-			'Mesh': THREE.Mesh,
-			'Object3D': THREE.Object3D
-
-		};
-
-		for ( var type in objects ) {
-
-			if ( object instanceof objects[ type ] ) return type;
-
-		}
-
-	}
-
 	var refreshFogUI = function () {
 
 		var type = fogType.getValue();
@@ -152,7 +126,7 @@ Sidebar.Scene = function ( editor ) {
 
 		var options = {};
 
-		options[ scene.id ] = scene.name + ' <span style="color: #aaa">- ' + getObjectType( scene ) + '</span>';
+		options[ scene.id ] = '<span class="type">' + editor.getObjectType( scene ) + '</span> ' + scene.name;
 
 		( function addObjects( objects, pad ) {
 
@@ -160,7 +134,15 @@ Sidebar.Scene = function ( editor ) {
 
 				var object = objects[ i ];
 
-				options[ object.id ] = pad + object.name + ' <span style="color: #aaa">- ' + getObjectType( object ) + '</span>';
+				var option = pad + '<span class="type">' + editor.getObjectType( object ) + '</span> ' + object.name;
+
+				if ( object instanceof THREE.Mesh ) {
+
+					option += ' ( ' + object.geometry.name + ', ' + object.material.name + ' ) ';
+
+				}
+
+				options[ object.id ] = option;
 
 				addObjects( object.children, pad + '&nbsp;&nbsp;&nbsp;' );
 
@@ -169,7 +151,12 @@ Sidebar.Scene = function ( editor ) {
 		} )( scene.children, '&nbsp;&nbsp;&nbsp;' );
 
 		outliner.setOptions( options );
-		outliner.setValue( selected );
+
+		if ( editor.selected !== null ) {
+
+			outliner.setValue( editor.selected.id );
+
+		}
 
 		if ( scene.fog ) {
 
@@ -200,9 +187,7 @@ Sidebar.Scene = function ( editor ) {
 
 	signals.objectSelected.add( function ( object ) {
 
-		selected = object !== null ? object.id : null;
-
-		outliner.setValue( selected );
+		outliner.setValue( object !== null ? object.id : null );
 
 	} );
 

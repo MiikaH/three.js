@@ -4,6 +4,14 @@ UI.Element = function () {};
 
 UI.Element.prototype = {
 
+	setId: function ( id ) {
+
+		this.dom.id = id;
+		
+		return this;
+
+	},
+
 	setClass: function ( name ) {
 
 		this.dom.className = name;
@@ -131,7 +139,7 @@ UI.Text = function ( text ) {
 	dom.className = 'Text';
 	dom.style.cursor = 'default';
 	dom.style.display = 'inline-block';
-	dom.style.verticalAlign = 'top';
+	dom.style.verticalAlign = 'middle';
 
 	this.dom = dom;
 	this.setValue( text );
@@ -166,8 +174,6 @@ UI.Input = function () {
 	var dom = document.createElement( 'input' );
 	dom.className = 'Input';
 	dom.style.padding = '2px';
-	dom.style.marginTop = '-2px';
-	dom.style.marginLeft = '-2px';
 	dom.style.border = '1px solid #ccc';
 
 	dom.addEventListener( 'keydown', function ( event ) {
@@ -210,8 +216,6 @@ UI.TextArea = function () {
 	var dom = document.createElement( 'textarea' );
 	dom.className = 'TextArea';
 	dom.style.padding = '2px';
-	dom.style.marginTop = '-2px';
-	dom.style.marginLeft = '-2px';
 	dom.style.border = '1px solid #ccc';
 
 	dom.addEventListener( 'keydown', function ( event ) {
@@ -532,8 +536,6 @@ UI.Number = function ( number ) {
 	dom.style.fontSize = '12px';
 	dom.style.backgroundColor = 'transparent';
 	dom.style.border = '1px solid transparent';
-	dom.style.marginTop = '-2px';
-	dom.style.marginLegt = '-2px';
 	dom.style.padding = '2px';
 	dom.style.cursor = 'col-resize';
 	dom.value = '0.00';
@@ -694,8 +696,6 @@ UI.Integer = function ( number ) {
 	dom.style.fontSize = '12px';
 	dom.style.backgroundColor = 'transparent';
 	dom.style.border = '1px solid transparent';
-	dom.style.marginTop = '-2px';
-	dom.style.marginLegt = '-2px';
 	dom.style.padding = '2px';
 	dom.style.cursor = 'col-resize';
 	dom.value = '0.00';

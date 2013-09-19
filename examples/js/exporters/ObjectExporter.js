@@ -15,7 +15,7 @@ THREE.ObjectExporter.prototype = {
 		var output = {
 			metadata: {
 				version: 4.3,
-				type: 'object',
+				type: 'Object',
 				generator: 'ObjectExporter'
 			}
 		};
@@ -24,6 +24,7 @@ THREE.ObjectExporter.prototype = {
 
 		var geometries = {};
 		var geometryExporter = new THREE.GeometryExporter();
+		var bufferGeometryExporter = new THREE.BufferGeometryExporter();
 
 		var parseGeometry = function ( geometry ) {
 
@@ -58,6 +59,12 @@ THREE.ObjectExporter.prototype = {
 					data.widthSegments = geometry.widthSegments;
 					data.heightSegments = geometry.heightSegments;
 					data.depthSegments = geometry.depthSegments;
+
+				} else if ( geometry instanceof THREE.CircleGeometry ) {
+
+					data.type = 'CircleGeometry';
+					data.radius = geometry.radius;
+					data.segments = geometry.segments;
 
 				} else if ( geometry instanceof THREE.CylinderGeometry ) {
 
@@ -105,6 +112,13 @@ THREE.ObjectExporter.prototype = {
 					data.p = geometry.p;
 					data.q = geometry.q;
 					data.heightScale = geometry.heightScale;
+
+				} else if ( geometry instanceof THREE.BufferGeometry ) {
+
+					data.type = 'BufferGeometry';
+					data.data = bufferGeometryExporter.parse( geometry );
+
+					delete data.data.metadata;
 
 				} else if ( geometry instanceof THREE.Geometry ) {
 
